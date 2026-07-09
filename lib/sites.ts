@@ -12,6 +12,9 @@ import { tmpdir } from "os";
 import path from "path";
 import { AppState } from "./types";
 import { getState, setState } from "./store";
+import { buildWorld } from "@/data/demo-seeds";
+import { MOCK_COMPANIES } from "@/data/demo-companies";
+import { REAL_COMPANIES } from "@/data/demo-companies-real";
 
 // Mirrors the DIR logic in lib/store.ts (kept local to avoid touching it).
 const DIR = process.env.VERCEL
@@ -80,7 +83,50 @@ export async function archiveActiveState(): Promise<void> {
   await archive(await getState());
 }
 
+// ── Demo seeding ────────────────────────────────────────────────────
+// On first boot (or after a container restart wipes the ephemeral disk),
+// materialize the demo roster — 3 real-data worlds + 3 mocked — into the
+// sites dir so the switcher is always populated, and default the active
+// board to buildgravity. A marker file makes this idempotent, and it only
+// touches state when it's pristine, so a real run is never clobbered.
+let seedChecked = false;
+const DEFAULT_ACTIVE = "buildgravity.co";
+
+export async function ensureSeeded(): Promise<void> {
+  if (seedChecked) return;
+  seedChecked = true;
+  try {
+    await fs.mkdir(SITES_DIR, { recursive: true });
+    const marker = path.join(SITES_DIR, ".seeded");
+    try {
+      await fs.access(marker);
+      return; // already seeded this container
+    } catch {
+      /* not seeded yet */
+    }
+    const worlds = [...REAL_COMPANIES, ...MOCK_COMPANIES].map(buildWorld);
+    await Promise.all(
+      worlds.map((w) =>
+        fs.writeFile(
+          path.join(SITES_DIR, `${siteSlug(w.input.website)}.json`),
+          JSON.stringify(w, null, 2)
+        )
+      )
+    );
+    const active = await getState();
+    if (!active.input.website) {
+      const hero =
+        worlds.find((w) => w.input.website === DEFAULT_ACTIVE) ?? worlds[0];
+      if (hero) await setState(hero);
+    }
+    await fs.writeFile(marker, new Date().toISOString());
+  } catch (err) {
+    console.error("[seed]", err);
+  }
+}
+
 export async function listSites(): Promise<SiteMeta[]> {
+  await ensureSeeded();
   const active = await getState();
   const activeSlug = active.input.website
     ? siteSlug(active.input.website)

@@ -5,7 +5,8 @@ export type SignalType =
   | "champion"
   | "hiring"
   | "competitor"
-  | "keyword";
+  | "keyword"
+  | "funding";
 
 export type ProspectState =
   | "cold"
