@@ -34,17 +34,23 @@ npm run dev        # http://localhost:3000
 
 Works with **zero API keys** — the whole loop runs on a cached demo world
 (fictional prospects, scripted engagement) so nothing ever blocks on a third
-party. Add keys in `.env` (see `.env.example`) and each layer switches to
-live data independently:
+party. Set `GRAVITY_MOCK=1` to force this deterministic demo world even on a
+machine with credentials (recommended on stage). Add keys in `.env` (see
+`.env.example`) and each layer switches to live data independently:
 
 | Key | Unlocks |
 |---|---|
-| `ANTHROPIC_API_KEY` | Claude: website distillation, world models, gravity map, content, outreach |
+| `ANTHROPIC_API_KEY` | Claude: website distillation, world models, gravity map, content, outreach (optional if the machine has a Claude Code subscription login — the managed crew rides it) |
 | `SILLAGE_API_KEY` | intent signals + company→people mappings (`sk_live_` REST; MCP uses OAuth) |
 | `FULLENRICH_API_KEY` | people search + just-in-time email/phone enrichment |
 | `APIFY_TOKEN` | LinkedIn behavioral layer (harvestapi actors) |
 | `X_API_KEY` | X timelines + following lists (pay-per-use; optional — with `APIFY_TOKEN` set, the cheaper X actors run first) |
 | `XAI_API_KEY` | `x_search` — handle-filtered semantic search over X |
+
+Managed-crew auth: the Agent SDK picks up `ANTHROPIC_API_KEY`, or a Claude
+subscription via `claude setup-token` → put the token in
+`CLAUDE_CODE_OAUTH_TOKEN`. On a 401 (stale login), re-run `claude setup-token`
+— the app just falls back to fixtures in the meantime.
 
 Demo flow: paste a website → **build gravity** → watch the crew on
 `/board` → review `/plan` → hit **scan engagement** on `/warm` to close the
@@ -53,10 +59,13 @@ engager who was never on the target list).
 
 ## Stack
 
-- **Claude** (`claude-sonnet-5` parallel prospect modelers, `claude-opus-4-8`
-  synthesis + content) via `@anthropic-ai/sdk`; sponsor MCPs connect via the
-  Claude Agent SDK / Claude Code (`api.getsillage.com/api/mcp/v2`,
-  `mcp.fullenrich.com/mcp`)
+- **Claude managed agents** — the crew (scout / listener / strategist /
+  radar) is defined via the Agent SDK's `options.agents` (sonnet modelers,
+  opus synthesis + content), running headless with schema-validated outputs;
+  authenticates with an API key **or** the team's Claude subscription login
+  (`claude setup-token`), with direct `@anthropic-ai/sdk` as fallback;
+  sponsor MCPs connect through the same SDK
+  (`api.getsillage.com/api/mcp/v2`, `mcp.fullenrich.com/mcp`)
 - **Sillage** — Champion/Competitor/Hiring signal agents, keyword runs,
   named-people company mappings (their open-source skills pack drives setup:
   `npx skills add sillage-labs/skills`)

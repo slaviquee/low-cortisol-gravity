@@ -18,8 +18,9 @@ import {
   WARM_TRIGGER,
   WarmCard,
 } from "@/lib/types";
-import { generateText, hasClaude, MODEL_DEEP } from "./claude";
-import { OUTREACH_SYSTEM } from "./prompts";
+import { think } from "./brain";
+import { hasClaude } from "./claude";
+import { managedAvailable } from "./managed";
 import { enrichContact } from "./tools/fullenrich";
 import { distillWebsite } from "./tools/website";
 
@@ -37,7 +38,7 @@ async function crew(agent: CrewAgent, status: "running" | "done", note: string) 
 }
 
 export async function runPipeline(website: string, targets: string[]) {
-  const mock = !hasClaude();
+  const mock = !hasClaude() && !managedAvailable();
 
   // ── Scout: website → narrative; ICP + accounts into Sillage; signals back
   await crew("scout", "running", `reading ${website}…`);
@@ -263,13 +264,12 @@ async function draftOutreach(
   model: BuyerWorldModel | null
 ): Promise<{ email: string; note: string }> {
   const first = name.split(" ")[0];
-  if (hasClaude() && model) {
-    const text = await generateText({
-      model: MODEL_DEEP,
-      system: OUTREACH_SYSTEM,
-      prompt: `Prospect: ${name}, ${title}.\nTheir engagement: "${quote}"\nWorld model: ${JSON.stringify({ topics: model.topics, formats: model.formats })}\n\nReturn the email, then '---', then the connection note.`,
-      maxTokens: 500,
-    });
+  if (model) {
+    const text = await think(
+      "radar",
+      `Prospect: ${name}, ${title}.\nTheir engagement: "${quote}"\nWorld model: ${JSON.stringify({ topics: model.topics, formats: model.formats })}\n\nReturn the email, then '---', then the connection note.`,
+      { deep: true }
+    );
     if (text) {
       const [email, note] = text.split(/\n-{3,}\n/);
       return { email: email?.trim() ?? text, note: note?.trim() ?? "" };

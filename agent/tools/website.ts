@@ -1,8 +1,7 @@
 // read_website — Scout's input. Always real (plain fetch), fixture fallback.
 
 import { FIXTURE_SUMMARY } from "@/data/fixtures";
-import { generateText } from "../claude";
-import { SCOUT_SYSTEM } from "../prompts";
+import { think } from "../brain";
 
 export async function distillWebsite(url: string): Promise<string> {
   const normalized = url.startsWith("http") ? url : `https://${url}`;
@@ -24,10 +23,9 @@ export async function distillWebsite(url: string): Promise<string> {
     return FIXTURE_SUMMARY;
   }
 
-  const distilled = await generateText({
-    system: SCOUT_SYSTEM,
-    prompt: `Website ${normalized} content:\n\n${text}\n\nReturn ONLY the one-sentence product narrative ("X sells Y to Z"), nothing else.`,
-    maxTokens: 200,
-  });
+  const distilled = await think(
+    "scout",
+    `Website ${normalized} content:\n\n${text}\n\nReturn ONLY the one-sentence product narrative ("X sells Y to Z"), nothing else.`
+  );
   return distilled?.trim() || FIXTURE_SUMMARY;
 }

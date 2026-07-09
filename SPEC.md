@@ -134,7 +134,7 @@ paste your website ▸ crew runs (~2 min)
 
 | Layer | Tool | Role |
 |---|---|---|
-| Reasoning & orchestration | **Claude** (Agent SDK) | pipeline orchestration, parallel per-prospect subagents, structured world models, gravity map synthesis, content + outreach generation with cited evidence |
+| Reasoning & orchestration | **Claude managed agents** (Agent SDK `options.agents`) | the crew runs as named managed subagents (headless, schema-validated outputs); world models, gravity-map synthesis, content + outreach with cited evidence; auths via API key **or** a Claude subscription login |
 | Intent signals | **Sillage** | via their **MCP** (OAuth, no key), driven by their open-source **skills pack**: Champion/Competitor/Hiring agents, keyword signal runs, company mappings with *named people* (stages 1–2), content angles (stage 5); REST (`sk_live_`) fallback |
 | People data | **FullEnrich** | people **search** resolves identity (stage 2); **enrichment** is just-in-time — emails for the low-orbit path, email+phone at the Warm trigger and for ICP-fit engagers (stage 6); MCP server available |
 | LinkedIn data | Apify | verified actors below |
@@ -152,7 +152,7 @@ paste your website ▸ crew runs (~2 min)
 
 Run each actor **once per prospect and cache** — the whole day's data for ~50 prospects costs under $20, and the demo must never depend on a live third party.
 
-**App:** Next.js dashboard — onboard (paste your site) → prospect board (heat + Gravity Score ring + state) → world model view → gravity plan → warm queue. Backend: TypeScript, Claude Agent SDK with **both sponsor MCPs** — Sillage (`api.getsillage.com/api/mcp/v2`, OAuth workspace login, ~35 tools) and FullEnrich (`mcp.fullenrich.com/mcp`) — plus 4 custom tools (`read_website`, `apify_run`, `x_api`, `x_search`). Install Sillage's own playbooks (`npx skills add sillage-labs/skills`) so the agent drives the workspace their way: persona → accounts → coverage → agents → runs. Drop to REST (FullEnrich webhooks, Sillage `sk_live_`) only where a flow needs it. Models: `claude-sonnet-5` for the parallel prospect modelers, `claude-opus-4-8` (extended thinking) for gravity-map synthesis and content. Storage: SQLite/JSON — hackathon-grade.
+**App:** Next.js dashboard — onboard (paste your site) → prospect board (heat + Gravity Score ring + state) → world model view → gravity plan → warm queue. Backend: TypeScript; the crew is defined as **Claude managed agents** (Agent SDK `options.agents`, headless: `settingSources: []`, `permissionMode: "dontAsk"`, structured outputs via `outputFormat: json_schema`), with **both sponsor MCPs** — Sillage (`api.getsillage.com/api/mcp/v2`, OAuth workspace login, ~35 tools) and FullEnrich (`mcp.fullenrich.com/mcp`) — plus 4 custom tools (`read_website`, `apify_run`, `x_api`, `x_search`). Install Sillage's own playbooks (`npx skills add sillage-labs/skills`) so the agent drives the workspace their way: persona → accounts → coverage → agents → runs. Drop to REST (FullEnrich webhooks, Sillage `sk_live_`) only where a flow needs it. Models: `claude-sonnet-5` for the parallel prospect modelers, `claude-opus-4-8` (extended thinking) for gravity-map synthesis and content. Storage: SQLite/JSON — hackathon-grade.
 
 ```
 repo: /app     next.js dashboard

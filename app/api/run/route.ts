@@ -4,6 +4,7 @@ import { resetState, updateState } from "@/lib/store";
 import { FIXTURE_TARGETS, FIXTURE_WEBSITE } from "@/data/fixtures";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 300; // managed agents spawn a Claude Code subprocess
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));

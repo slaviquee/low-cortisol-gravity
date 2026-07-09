@@ -52,13 +52,13 @@ export async function latestActivityDates(profileUrl: string) {
   return items?.map((i) => i.postedAt).filter(Boolean) ?? null;
 }
 
-// X timeline via Apify (cheap path). Tolerant input: tweet-scraper accepts
-// handles + search terms; we send both spellings seen in its schema history.
+// X timeline via Apify (cheap path). Verified input schema: twitterHandles
+// only — adding searchTerms too would bill a second query (50-tweet minimum
+// applies per query).
 export async function xTweetsViaApify(handle: string, max = 50) {
   const clean = handle.replace(/^@/, "");
   const items = await runActor<Record<string, unknown>>("xTweets", {
     twitterHandles: [clean],
-    searchTerms: [`from:${clean}`],
     maxItems: Math.max(max, 50), // actor bills a 50-tweet minimum per query
     sort: "Latest",
   });
@@ -72,12 +72,12 @@ export async function xTweetsViaApify(handle: string, max = 50) {
 }
 
 // X following list via Apify (~100× cheaper than X API for follows).
+// Verified input schema: twitterHandles + relation.
 export async function xFollowingViaApify(handle: string, max = 500) {
   const clean = handle.replace(/^@/, "");
   const items = await runActor<Record<string, unknown>>("xFollowing", {
-    startUrls: [`https://x.com/${clean}/following`],
-    profiles: [clean],
-    mode: "following",
+    twitterHandles: [clean],
+    relation: "following",
     maxItems: max,
   });
   return (
