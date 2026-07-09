@@ -53,6 +53,14 @@ export default function Prospect({
           </div>
         </div>
         <div className="flex items-center gap-4">
+          {(() => {
+            const cohort = state.cohorts.find((c) => c.members.includes(p.id));
+            return cohort ? (
+              <span className="card-paper px-2.5 py-1 text-[11px] text-[var(--muted)]">
+                cohort · {cohort.name}
+              </span>
+            ) : null;
+          })()}
           <HeatBar heat={p.heat} />
           <StateChip state={p.state} />
         </div>

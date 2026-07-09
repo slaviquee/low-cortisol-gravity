@@ -8,6 +8,7 @@ import {
   FIXTURE_GRAVITY_MAP,
   FIXTURE_ICP,
   FIXTURE_SUMMARY,
+  fixtureCohorts,
   fixturePlan,
   fixturePlanV2,
   fixtureProspects,
@@ -166,12 +167,26 @@ export async function runPipeline(
   }
   await crew("listener", "done", `${hot.length} Buyer World Models, every claim with evidence`);
 
-  // ── Strategist: Gravity Map + the week's plan
+  // ── Strategist: Gravity Map → taste cohorts → the week's plan
   await crew("strategist", "running", "synthesizing the Gravity Map across the ICP…");
   await sleep(mock ? 2500 : 500);
   await updateState((s) => {
     s.gravity_map = FIXTURE_GRAVITY_MAP; // real mode: generateJSON(GRAVITY_MAP_SYSTEM,…) on MODEL_DEEP
   });
+  // Cluster world models into taste cohorts: one post serves a cohort,
+  // not a person — and performance gets scored per cohort.
+  await crew("strategist", "running", "clustering 3 world models → 2 taste cohorts (+1 quiet)…");
+  await sleep(mock ? 1600 : 300);
+  await updateState((s) => {
+    s.cohorts = fixtureCohorts();
+  });
+  await updateBrain((b) =>
+    decide(
+      b,
+      "target content at taste cohorts, not individuals",
+      "chart skeptics (2 buyers) and systems thinkers (1) reward different formats — one post per cohort beats one post per person"
+    )
+  );
   await crew("strategist", "running", "drafting the gravity plan: posts · comments · micro-actions…");
   await sleep(mock ? 2500 : 500);
   const gated = await evalGate(fixturePlan(), "strategist");
@@ -258,9 +273,19 @@ export async function radarScan(): Promise<string> {
       s.log.push({ at, agent: "radar", msg: `${name} ${event.kind === "comment" ? "commented on" : "reacted to"} your post` });
     });
 
-    // Every data point sharpens the brain: content performance + learnings.
+    // Every data point sharpens the brain: content performance + learnings,
+    // attributed to the taste cohort the action targeted.
     const st = await getState();
     const planItem = st.plan.find((x) => x.id === event.post_id);
+    if (planItem?.cohort) {
+      await updateState((s) => {
+        const c = s.cohorts.find((x) => x.id === planItem.cohort);
+        if (c) {
+          c.engagements++;
+          if (becameWarm) c.warm++;
+        }
+      });
+    }
     await updateBrain((b) => {
       bumpContent(
         b,
@@ -273,7 +298,7 @@ export async function radarScan(): Promise<string> {
         learn(
           b,
           "radar",
-          `${name} went warm off "${planItem?.title ?? event.post_id}" — ${event.kind}s on that format predict meetings`,
+          `${name} went warm off "${planItem?.title ?? event.post_id}"${planItem?.cohort ? ` — ${planItem.cohort} is converting` : ""}`,
           event.post_id
         );
     });
@@ -296,6 +321,21 @@ export async function radarScan(): Promise<string> {
     );
     learn(b, "radar", `"${stPlan?.title ?? event.post_id}" pulled an ICP-fit stranger (${st.name}) — the format sources net-new pipeline`, event.post_id);
   });
+  // Serendipity engagers join the cohort whose content pulled them in.
+  if (stPlan?.cohort) {
+    await updateState((s) => {
+      const c = s.cohorts.find((x) => x.id === stPlan.cohort);
+      if (c) {
+        c.engagements++;
+        if (!c.members.includes(id)) c.members.push(id);
+      }
+      s.log.push({
+        at: new Date().toISOString(),
+        agent: "radar",
+        msg: `${st.name} joined the ${stPlan.cohort} cohort — its content pulled her in`,
+      });
+    });
+  }
   await updateState((s) => {
     s.log.push({ at, agent: "radar", msg: `${st.name} (${st.title} @ ${st.company}) engaged — not on the list. Running ICP check…` });
   });
@@ -410,8 +450,8 @@ export async function replanFromEngagement(): Promise<number> {
   await updateBrain((b) =>
     decide(
       b,
-      "plan v2: double down on the tactical-chart format",
-      `it earned ${engaged} target engagements (brain: content_performance)`
+      "plan v2: shift effort toward the chart-skeptics cohort",
+      `its content earned ${engaged} target engagements — best-performing cohort this week`
     )
   );
   await updateState((st) => {
@@ -502,8 +542,8 @@ async function draftOutreach(
     ? "the QA gap you called out"
     : "exactly the QA gap from that post";
   return {
-    email: `Subject: the QA gap\n\nHi ${first} — ${hook} matches what we measured across 40 teams: everyone automated the sending, nobody automated the checking. That gap is exactly what we work on. Worth 20 minutes next week to compare notes on what you're seeing internally?\n\n— Alex @ Loopwell`,
-    note: `${first} — enjoyed your take on yesterday's thread. We're working on ${noteHook}. Happy to swap notes.`,
+    email: `Subject: the QA gap\n\nHi ${first} — ${hook} matches what we measured across 40 teams: everyone automated the sending, nobody automated the checking. That gap is what we work on. Worth 20 minutes next week to compare notes on what you're seeing internally?\n\n— Alex @ Loopwell`,
+    note: `${first} — your point on ${noteHook} stuck with me. It's the problem we work on all day. Open to swapping notes?`,
   };
 }
 

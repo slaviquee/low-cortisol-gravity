@@ -3,6 +3,7 @@
 
 import {
   BuyerWorldModel,
+  Cohort,
   EngagementEvent,
   GravityMap,
   PlanItem,
@@ -215,6 +216,40 @@ export function fixtureProspects(): BuyerWorldModel[] {
   ];
 }
 
+// Taste cohorts — buyers who reward the same things. One post serves a
+// cohort, not a person; performance is scored per cohort.
+export function fixtureCohorts(): Cohort[] {
+  return [
+    {
+      id: "chart-skeptics",
+      name: "chart skeptics",
+      taste: "numbers-first, allergic to anything that smells automated",
+      format: "tactical_charts",
+      members: ["jane-kowalski", "tom-reyes"],
+      engagements: 0,
+      warm: 0,
+    },
+    {
+      id: "systems-thinkers",
+      name: "systems thinkers",
+      taste: "diagrams and workflow breakdowns over hot takes",
+      format: "diagrams",
+      members: ["priya-nair"],
+      engagements: 0,
+      warm: 0,
+    },
+    {
+      id: "quiet-execs",
+      name: "quiet execs",
+      taste: "not on the feed — email-first, timed by signals",
+      format: "email",
+      members: ["marc-delacroix", "hana-sato"],
+      engagements: 0,
+      warm: 0,
+    },
+  ];
+}
+
 export const FIXTURE_GRAVITY_MAP: GravityMap = {
   summary:
     "Your ICP is mid-market sales leadership having one shared conversation: outbound volume stopped working and generic AI made it worse. They reward tactical, numbers-first content and punish anything that smells like automation. The conversation happens in the comment sections of two people: J. Founder (OutboundWire) and Mara Vidal (RevOps Weekly).",
@@ -246,6 +281,7 @@ export function fixturePlan(): PlanItem[] {
   return [
     {
       id: "p-mon-react",
+      cohort: "systems-thinkers",
       day: "Mon",
       type: "react",
       channel: "linkedin",
@@ -258,6 +294,7 @@ export function fixturePlan(): PlanItem[] {
     },
     {
       id: "p-tue-post",
+      cohort: "chart-skeptics",
       day: "Tue",
       type: "post",
       channel: "linkedin",
@@ -271,6 +308,7 @@ export function fixturePlan(): PlanItem[] {
     },
     {
       id: "p-tue-comment",
+      cohort: "chart-skeptics",
       day: "Tue",
       type: "comment",
       channel: "linkedin",
@@ -296,6 +334,7 @@ export function fixturePlan(): PlanItem[] {
     },
     {
       id: "p-wed-post-x",
+      cohort: "chart-skeptics",
       day: "Wed",
       type: "post",
       channel: "x",
@@ -309,6 +348,7 @@ export function fixturePlan(): PlanItem[] {
     },
     {
       id: "p-thu-connect",
+      cohort: "chart-skeptics",
       day: "Thu",
       type: "connect",
       channel: "linkedin",
@@ -322,6 +362,7 @@ export function fixturePlan(): PlanItem[] {
     },
     {
       id: "p-fri-comment",
+      cohort: "systems-thinkers",
       day: "Fri",
       type: "comment",
       channel: "linkedin",
@@ -341,6 +382,7 @@ export function fixturePlanV2(): PlanItem[] {
   return [
     {
       id: "p2-post-followup",
+      cohort: "chart-skeptics",
       day: "Mon",
       type: "post",
       channel: "linkedin",
@@ -354,6 +396,7 @@ export function fixturePlanV2(): PlanItem[] {
     },
     {
       id: "p2-comment-jane",
+      cohort: "chart-skeptics",
       day: "Mon",
       type: "comment",
       channel: "linkedin",
@@ -366,6 +409,7 @@ export function fixturePlanV2(): PlanItem[] {
     },
     {
       id: "p2-react-lena",
+      cohort: "chart-skeptics",
       day: "Tue",
       type: "react",
       channel: "linkedin",

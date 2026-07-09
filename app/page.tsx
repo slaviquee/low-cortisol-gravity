@@ -40,15 +40,17 @@ function Line({ children, delay = 0, green }: { children: React.ReactNode; delay
 function SceneCompany() {
   return (
     <div>
-      <p className="mono label rise">01 · it reads your company</p>
+      <p className="mono label rise">01 · it learns your company</p>
       <div className="mt-3 flex flex-wrap gap-1.5">
-        <Chip delay={120}>website → narrative</Chip>
-        <Chip delay={280}>your posts → tone of voice</Chip>
-        <Chip delay={440}>numbers-first · no fluff</Chip>
+        <Chip delay={120}>website → what you sell, to whom</Chip>
+        <Chip delay={280}>your posts → how you actually sound</Chip>
       </div>
-      <Line delay={620}>
-        <span className="link-green">→</span> everything it ever writes sounds
-        like you — enforced, not hoped
+      <Line delay={480}>
+        this grounds every move after — not just what it writes,
+      </Line>
+      <Line delay={700}>
+        <span className="link-green">→</span> but what it recommends: post or
+        comment, to whom, and when
       </Line>
     </div>
   );
@@ -90,8 +92,8 @@ function SceneTaste() {
         ))}
       </div>
       <Line delay={840}>
-        <span className="link-green">→</span> every claim carries evidence —
-        posts, comments, follows, even podcast transcripts
+        <span className="link-green">→</span> profiles cluster into taste
+        cohorts: chart skeptics (2) · systems thinkers (1)
       </Line>
     </div>
   );
@@ -100,11 +102,11 @@ function SceneTaste() {
 function ScenePlan() {
   return (
     <div>
-      <p className="mono label rise">04 · it generates gravity, in your voice</p>
+      <p className="mono label rise">04 · it generates gravity, per cohort</p>
       <div className="mt-3 space-y-1.5">
         {[
-          ["→ post", "the chart their feeds reward", "eval 100"],
-          ["→ comment", "inside the threads they already read", ""],
+          ["→ post", "a tactical chart, for the chart skeptics", "eval 100"],
+          ["→ comment", "in the threads systems thinkers read", ""],
           ["→ connect", "third touch, never the first", ""],
         ].map(([t, d, e], i) => (
           <p key={i} className="rise text-[12.5px]" style={{ animationDelay: `${150 + i * 200}ms` }}>
@@ -115,30 +117,41 @@ function ScenePlan() {
         ))}
       </div>
       <Line delay={780}>
-        <span className="link-green">→</span> you stay in control: edit any
-        draft, your note becomes a permanent rule
+        one post serves a whole cohort — and it&apos;s written in your voice.
+        edit any draft; your note becomes a standing rule
       </Line>
     </div>
   );
 }
 
 function SceneLoop() {
+  const perf = [
+    { name: "chart skeptics", eng: 3, warm: 2, w: 100 },
+    { name: "systems thinkers", eng: 1, warm: 0, w: 33 },
+  ];
   return (
     <div>
-      <p className="mono label rise">05 · the loop — better every iteration</p>
-      <div className="rise mt-3 flex items-center gap-2" style={{ animationDelay: "150ms" }}>
-        <HeatBar heat={54} />
-        <span className="mono text-[11px] text-[var(--muted)]">pipeline warming</span>
+      <p className="mono label rise">05 · it learns what converts, per cohort</p>
+      <div className="mt-3 space-y-2">
+        {perf.map((c, i) => (
+          <div key={c.name} className="rise" style={{ animationDelay: `${150 + i * 220}ms` }}>
+            <div className="flex items-baseline justify-between">
+              <span className="mono text-[11.5px]">{c.name}</span>
+              <span className="mono text-[10.5px] text-[var(--muted)]">
+                {c.eng} engagement{c.eng === 1 ? "" : "s"} · {c.warm} warm
+              </span>
+            </div>
+            <div className="mt-1 h-[3px] w-full overflow-hidden rounded-full bg-[var(--card-deep)]">
+              <div className="h-full rounded-full" style={{ width: `${c.w}%`, background: "var(--accent)" }} />
+            </div>
+          </div>
+        ))}
       </div>
-      <p className="rise mono mt-3 text-[11.5px] text-[var(--muted)]" style={{ animationDelay: "400ms" }}>
+      <p className="rise mono mt-3 text-[11.5px] text-[var(--muted)]" style={{ animationDelay: "620ms" }}>
         propose → execute → measure → regenerate ↻
       </p>
-      <Line delay={650}>
-        engaged buyers go warm → contact bought just-in-time → tailored pitch
-        ready before the call
-      </Line>
-      <Line delay={950} green>
-        → plan v2 doubles down on what the data says worked. every time.
+      <Line delay={850} green>
+        → next week&apos;s plan shifts effort to the cohorts that convert
       </Line>
     </div>
   );

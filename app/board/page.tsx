@@ -15,6 +15,7 @@ import {
   meshStyle,
   postTemp,
   prospectTemp,
+  tempGradient,
   usePolledState,
   warmthScore,
 } from "@/components/ui";
@@ -129,6 +130,61 @@ export default function Pipeline() {
       </div>
 
       <CrewStrip crew={state.crew} />
+
+      {state.cohorts.length > 0 && (
+        <div>
+          <p className="label mb-2">
+            taste cohorts — every action targets a cohort, not a person
+          </p>
+          <div className="grid gap-2 md:grid-cols-3">
+            {state.cohorts.map((c) => {
+              const maxEng = Math.max(1, ...state.cohorts.map((x) => x.engagements));
+              return (
+                <div key={c.id} className="card rise p-4">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className="text-[13.5px] font-semibold tracking-tight">{c.name}</p>
+                    <span className="mono shrink-0 text-[11px] text-[var(--muted)]">
+                      {c.engagements} eng · {c.warm} warm
+                    </span>
+                  </div>
+                  <p className="label mt-0.5 leading-snug" style={{ fontSize: 11 }}>
+                    {c.taste}
+                  </p>
+                  <div className="mt-2.5 flex items-center gap-1.5">
+                    {c.members.map((id) => {
+                      const p = state.prospects.find((x) => x.id === id);
+                      return (
+                        <span
+                          key={id}
+                          title={p?.prospect.name ?? id.replaceAll("-", " ")}
+                          className="h-[14px] w-[14px] rounded-full"
+                          style={{
+                            background: tempGradient(p ? prospectTemp(p) : 0.85),
+                            boxShadow: "inset 0 0 0 1px rgba(27,27,25,.12)",
+                          }}
+                        />
+                      );
+                    })}
+                    <span className="label ml-1" style={{ fontSize: 10.5 }}>
+                      {c.members.length} buyer{c.members.length === 1 ? "" : "s"}
+                    </span>
+                  </div>
+                  <div className="mt-2.5 h-[3px] w-full overflow-hidden rounded-full bg-[var(--card-deep)]">
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${(c.engagements / maxEng) * 100}%`,
+                        background: "var(--accent)",
+                        transition: "width 600ms",
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="gap-7 space-y-8 lg:grid lg:grid-cols-[1.1fr_1.25fr_1.15fr_250px] lg:space-y-0">
         {/* ── 01 · map buyers ─────────────────────────────── */}

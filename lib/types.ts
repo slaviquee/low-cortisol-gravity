@@ -82,10 +82,24 @@ export interface PlanItem {
   evidence: string[];
   link?: string; // deep link the human clicks (profile, post)
   variant?: "A" | "B";
+  cohort?: string; // which taste cohort this action targets
   done: boolean;
   eval?: { score: number; notes: string[] }; // the quality gate's verdict
   user_note?: string; // human steering — becomes a brain learning
   revised?: boolean;
+}
+
+// A taste cohort: buyers who reward the same formats and topics. Content
+// targets a cohort, not a person — one post works many buyers at once —
+// and performance is scored per cohort.
+export interface Cohort {
+  id: string;
+  name: string;
+  taste: string; // the shared taste signature, one line
+  format: string; // what this cohort rewards
+  members: string[]; // prospect ids (serendipity engagers join too)
+  engagements: number;
+  warm: number;
 }
 
 export interface GravityMapTheme {
@@ -140,6 +154,7 @@ export interface AppState {
   };
   crew: CrewStatus[];
   prospects: BuyerWorldModel[];
+  cohorts: Cohort[];
   gravity_map: GravityMap | null;
   plan: PlanItem[];
   warm: WarmCard[];
@@ -165,6 +180,7 @@ export function emptyState(): AppState {
     input: { website: "", product_summary: "", targets: [] },
     crew: emptyCrew(),
     prospects: [],
+    cohorts: [],
     gravity_map: null,
     plan: [],
     warm: [],

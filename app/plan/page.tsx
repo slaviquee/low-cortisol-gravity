@@ -113,6 +113,11 @@ export default function Plan() {
                       <span className="text-[14px] font-semibold tracking-tight">
                         {item.title}
                       </span>
+                      {item.cohort && (
+                        <span className="card-paper px-2 py-0.5 text-[10.5px] text-[var(--muted)]">
+                          → {item.cohort.replaceAll("-", " ")}
+                        </span>
+                      )}
                       {item.variant && (
                         <span className="mono label" style={{ fontSize: 10.5 }}>
                           variant {item.variant}

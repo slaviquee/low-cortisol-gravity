@@ -61,8 +61,9 @@ export function evalDraft(item: PlanItem, brain: CompanyBrain): EvalResult {
 // deterministic fallback so the loop always closes.
 export function mechanicalRevise(draft: string): string {
   return draft
-    .replace(/game-?changing/gi, "step-change")
-    .replace(/game-?changer/gi, "step change")
+    .replace(/\bthe game-?changing\b/gi, "the")
+    .replace(/\bgame-?changing\b/gi, "")
+    .replace(/\ba game-?changer\b/gi, "a real shift")
     .replace(/revolutioniz(e|es|ing)/gi, (_m, g: string) =>
       g.toLowerCase() === "ing" ? "reworking" : g.toLowerCase() === "es" ? "reworks" : "rework"
     )
