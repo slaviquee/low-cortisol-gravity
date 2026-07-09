@@ -5,8 +5,8 @@
 import Link from "next/link";
 import {
   CrewStrip,
-  Dial,
   DotTrace,
+  GravityWell,
   HeatBar,
   ScoreRing,
   StateChip,
@@ -54,18 +54,30 @@ export default function Board() {
 
         <CrewStrip crew={state.crew} />
 
+        {!state.run_done && state.log.length > 0 && (
+          <p
+            key={state.log[state.log.length - 1].msg}
+            className="log-in mono text-[12px] text-[var(--muted)]"
+          >
+            <span className="text-[var(--accent)]">
+              {state.log[state.log.length - 1].agent}
+            </span>{" "}
+            · {state.log[state.log.length - 1].msg}
+          </p>
+        )}
+
         <div className="grid grid-cols-3 gap-2">
-          <Dial
+          <GravityWell
             value={intentDensity}
             label="intent density"
             display={intentDensity.toFixed(3)}
           />
-          <Dial
+          <GravityWell
             value={coverage}
             label="orbit coverage"
             display={coverage >= 1 ? "full" : `${Math.round(coverage * 100)}%`}
           />
-          <Dial
+          <GravityWell
             value={warmRate}
             label="warm rate"
             display={`${Math.round(warmRate * 100)}%`}

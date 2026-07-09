@@ -25,13 +25,46 @@ body {
   letter-spacing: -0.006em;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* ambient warmth — a barely-there mesh drifting behind everything */
+body::before {
+  content: "";
+  position: fixed;
+  top: -30%;
+  right: -20%;
+  width: 75vw;
+  height: 75vw;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.5;
+  background:
+    radial-gradient(42% 38% at 62% 38%, rgba(255, 196, 94, 0.16) 0%, transparent 70%),
+    radial-gradient(38% 42% at 38% 62%, rgba(255, 137, 137, 0.1) 0%, transparent 70%);
+  animation: ambient-drift 26s ease-in-out infinite alternate;
+}
+
+@keyframes ambient-drift {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  }
+  100% {
+    transform: translate3d(-6%, 7%, 0) rotate(10deg) scale(1.12);
+  }
+}
+
+main,
+header,
+footer {
+  position: relative;
+  z-index: 1;
 }
 
 .mono {
   font-family: var(--font-mono), ui-monospace, monospace;
 }
 
-/* lowercase editorial labels — like the reference */
 .label {
   font-size: 12.5px;
   color: var(--muted);
@@ -43,11 +76,14 @@ body {
 .card {
   background: var(--card);
   border-radius: 12px;
-  transition: background 140ms;
+  transition: background 160ms, transform 200ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    box-shadow 200ms;
 }
 
 a.card:hover {
   background: var(--card-deep);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px -18px rgba(27, 27, 25, 0.35);
 }
 
 .card-paper {
@@ -61,17 +97,40 @@ a.card:hover {
   border-radius: 12px;
 }
 
-/* the statement piece — soft warm gradient mesh */
+/* the statement piece — living warm gradient mesh */
 .gradient-warm {
   position: relative;
   border-radius: 14px;
   overflow: hidden;
   color: #fff;
+  isolation: isolate;
+  background: linear-gradient(165deg, #ffb35c 0%, #ffd166 42%, #ff8f7d 100%);
+}
+
+.gradient-warm::before {
+  content: "";
+  position: absolute;
+  inset: -30%;
+  z-index: -1;
   background:
-    radial-gradient(110% 85% at 18% 8%, rgba(255, 196, 94, 0.95) 0%, rgba(255, 196, 94, 0) 62%),
-    radial-gradient(95% 75% at 88% 22%, rgba(255, 224, 102, 0.9) 0%, rgba(255, 224, 102, 0) 58%),
-    radial-gradient(130% 95% at 62% 100%, rgba(255, 120, 138, 0.95) 0%, rgba(255, 120, 138, 0) 68%),
-    linear-gradient(165deg, #ffb35c 0%, #ffd166 42%, #ff8f7d 100%);
+    radial-gradient(36% 32% at 30% 22%, rgba(255, 199, 89, 0.95) 0%, transparent 68%),
+    radial-gradient(30% 34% at 74% 30%, rgba(255, 228, 110, 0.9) 0%, transparent 64%),
+    radial-gradient(40% 36% at 56% 82%, rgba(255, 112, 134, 0.9) 0%, transparent 70%),
+    radial-gradient(26% 26% at 18% 78%, rgba(255, 170, 122, 0.8) 0%, transparent 66%);
+  animation: mesh-drift 16s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes mesh-drift {
+  0% {
+    transform: translate3d(-3%, -2%, 0) rotate(0deg) scale(1);
+  }
+  50% {
+    transform: translate3d(2%, 3%, 0) rotate(5deg) scale(1.06);
+  }
+  100% {
+    transform: translate3d(4%, -3%, 0) rotate(9deg) scale(1.1);
+  }
 }
 
 .gradient-warm::after {
@@ -79,7 +138,7 @@ a.card:hover {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  opacity: 0.35;
+  opacity: 0.32;
   mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
 }
@@ -96,15 +155,16 @@ a.card:hover {
   padding: 9px 16px;
   font-size: 13px;
   cursor: pointer;
-  transition: background 140ms, transform 120ms;
+  transition: background 160ms, transform 140ms, box-shadow 200ms;
 }
 
 .btn:hover {
   background: #3a3a36;
+  box-shadow: 0 8px 22px -14px rgba(27, 27, 25, 0.6);
 }
 
 .btn:active {
-  transform: translateY(1px);
+  transform: translateY(1px) scale(0.995);
 }
 
 .btn-ghost {
@@ -115,21 +175,36 @@ a.card:hover {
 
 .btn-ghost:hover {
   background: var(--card-deep);
+  box-shadow: inset 0 0 0 1px var(--faint);
 }
 
 .btn-onGradient {
   background: rgba(20, 20, 18, 0.85);
+  backdrop-filter: blur(6px);
+}
+
+/* arrows nudge forward on hover — everywhere */
+.arr {
+  display: inline-block;
+  transition: transform 180ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.btn:hover .arr,
+.link-green:hover .arr,
+a:hover > .arr,
+.group:hover .arr {
+  transform: translateX(3px);
 }
 
 .link-green {
   color: var(--accent);
   font-size: 13px;
   cursor: pointer;
-  transition: opacity 120ms;
+  transition: opacity 140ms;
 }
 
 .link-green:hover {
-  opacity: 0.7;
+  opacity: 0.72;
 }
 
 .input {
@@ -142,7 +217,7 @@ a.card:hover {
   color: var(--ink);
   outline: none;
   box-shadow: inset 0 0 0 1px transparent;
-  transition: box-shadow 140ms;
+  transition: box-shadow 180ms;
 }
 
 .input:focus {
@@ -153,15 +228,14 @@ a.card:hover {
   color: var(--faint);
 }
 
-/* status dot */
 .dot {
   display: inline-block;
   width: 7px;
   height: 7px;
   border-radius: 99px;
+  transition: background 300ms;
 }
 
-/* warm card left gradient edge */
 .warm-edge {
   position: relative;
 }
@@ -182,7 +256,7 @@ a.card:hover {
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(9px);
   }
   to {
     opacity: 1;
@@ -191,7 +265,7 @@ a.card:hover {
 }
 
 .rise {
-  animation: rise 460ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation: rise 520ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
 @keyframes pulse-dot {
@@ -208,17 +282,22 @@ a.card:hover {
   animation: pulse-dot 1.2s ease-in-out infinite;
 }
 
-@keyframes needle-sweep {
-  0% {
-    transform: rotate(-52deg);
+/* thinking feed lines */
+@keyframes log-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+    filter: blur(2px);
   }
-  100% {
-    transform: rotate(52deg);
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
   }
 }
 
-.needle-live {
-  animation: needle-sweep 5.5s ease-in-out infinite alternate;
+.log-in {
+  animation: log-in 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
 ::selection {
@@ -234,4 +313,14 @@ pre.draft {
   font-size: 12.5px;
   line-height: 1.65;
   color: #33332f;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -1,10 +1,11 @@
 "use client";
 
-// Shared pieces in the instrument-editorial language: dials in dotted
-// ellipses, status dots, mono numbers, one warm gradient statement piece.
+// Shared pieces in the gravity language: black masses, dotted orbits with
+// live orbiting bodies, captured-arc gauges, mono numbers, warm mesh.
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { AppState, BuyerWorldModel, CrewStatus, ProspectState } from "@/lib/types";
+import { useCallback, useEffect, useState } from "react";
+import { useRef } from "react";
+import { AppState, BuyerWorldModel, CrewStatus, LogLine, ProspectState } from "@/lib/types";
 
 export const STATE_COLOR: Record<ProspectState, string> = {
   cold: "var(--faint)",
@@ -74,91 +75,150 @@ export function DotTrace({ p }: { p: BuyerWorldModel }) {
   );
 }
 
-// The reference's instrument dial: charcoal disk + needle in a dotted ellipse.
-export function Dial({
-  value, // 0..1 → needle position
+// Elliptical orbit path for animateMotion.
+function orbitPath(cx: number, cy: number, rx: number, ry: number) {
+  return `M ${cx + rx} ${cy} A ${rx} ${ry} 0 1 1 ${cx - rx} ${cy} A ${rx} ${ry} 0 1 1 ${cx + rx} ${cy}`;
+}
+
+// A gravity well: black mass, dotted orbit with live bodies, and the value
+// as a captured arc around the mass — matter pulled in, not a clock.
+export function GravityWell({
+  value, // 0..1 → how much of the orbit is captured
   label,
   display,
-  live = false,
 }: {
   value: number;
   label: string;
   display: string;
-  live?: boolean;
 }) {
-  const angle = -110 + Math.max(0, Math.min(1, value)) * 220;
+  const v = Math.max(0.02, Math.min(1, value));
+  const arcR = 34;
+  const c = 2 * Math.PI * arcR;
   return (
-    <div className="flex flex-col items-center rise">
-      <svg width="150" height="104" viewBox="0 0 150 104">
+    <div className="rise flex flex-col items-center">
+      <svg width="160" height="112" viewBox="0 0 160 112">
         <ellipse
-          cx="75"
-          cy="52"
-          rx="72"
-          ry="48"
+          cx="80"
+          cy="56"
+          rx="73"
+          ry="47"
           fill="none"
           stroke="var(--faint)"
           strokeWidth="1"
           strokeDasharray="2 5"
         />
-        <circle cx="75" cy="52" r="30" fill="var(--charcoal)" />
-        <g
-          className={live ? "needle-live" : undefined}
-          style={
-            live
-              ? { transformOrigin: "75px 52px" }
-              : {
-                  transform: `rotate(${angle}deg)`,
-                  transformOrigin: "75px 52px",
-                  transition: "transform 800ms cubic-bezier(.2,.7,.2,1)",
-                }
-          }
-        >
-          <line
-            x1="75"
-            y1="52"
-            x2="75"
-            y2="29"
-            stroke="#f6f6f3"
-            strokeWidth="2"
-            strokeLinecap="round"
+        {/* captured arc — the gauge */}
+        <circle
+          cx="80"
+          cy="56"
+          r={arcR}
+          fill="none"
+          stroke="var(--accent)"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeDasharray={c}
+          strokeDashoffset={c * (1 - v)}
+          transform="rotate(-90 80 56)"
+          style={{ transition: "stroke-dashoffset 900ms cubic-bezier(.2,.7,.2,1)" }}
+        />
+        {/* the mass */}
+        <circle cx="80" cy="56" r="26" fill="var(--charcoal)" />
+        {/* orbiting bodies */}
+        <circle r="2.6" fill="var(--ink)">
+          <animateMotion
+            dur="9s"
+            repeatCount="indefinite"
+            path={orbitPath(80, 56, 73, 47)}
           />
-        </g>
+        </circle>
+        <circle r="1.9" fill="#e8a13d">
+          <animateMotion
+            dur="15s"
+            begin="-6s"
+            repeatCount="indefinite"
+            path={orbitPath(80, 56, 73, 47)}
+          />
+        </circle>
       </svg>
-      <p className="label mt-2">{label}</p>
+      <p className="label mt-1.5">{label}</p>
       <p className="mono mt-0.5 text-[15px] font-medium">{display}</p>
     </div>
   );
 }
 
+// Landing hero: a heavier mass, two orbits, three bodies at different periods.
+export function GravityHero() {
+  return (
+    <svg
+      width="300"
+      height="190"
+      viewBox="0 0 300 190"
+      className="mx-auto block"
+      aria-hidden
+    >
+      <ellipse cx="150" cy="95" rx="142" ry="82" fill="none" stroke="var(--faint)" strokeWidth="1" strokeDasharray="2 6" />
+      <ellipse cx="150" cy="95" rx="96" ry="54" fill="none" stroke="var(--faint)" strokeWidth="1" strokeDasharray="2 5" />
+      <circle cx="150" cy="95" r="36" fill="var(--charcoal)" />
+      <circle cx="150" cy="95" r="46" fill="none" stroke="rgba(27,27,25,.14)" strokeWidth="1" />
+      <circle r="3.2" fill="var(--ink)">
+        <animateMotion dur="11s" repeatCount="indefinite" path={orbitPath(150, 95, 142, 82)} />
+      </circle>
+      <circle r="2.4" fill="#e8a13d">
+        <animateMotion dur="7.5s" begin="-3s" repeatCount="indefinite" path={orbitPath(150, 95, 96, 54)} />
+      </circle>
+      <circle r="2.2" fill="var(--accent)">
+        <animateMotion
+          dur="17s"
+          begin="-9s"
+          repeatCount="indefinite"
+          path={orbitPath(150, 95, 142, 82)}
+          keyPoints="1;0"
+          keyTimes="0;1"
+          calcMode="linear"
+        />
+      </circle>
+    </svg>
+  );
+}
+
+// Score as a mass with a captured arc — white number inside the black body.
 export function ScoreRing({ score, size = 44 }: { score: number; size?: number }) {
   const r = (size - 6) / 2;
   const c = 2 * Math.PI * r;
   const pct = Math.min(score, 100) / 100;
   return (
-    <svg width={size} height={size} className="shrink-0 -rotate-90">
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--card-deep)" strokeWidth="3.5" />
+    <svg width={size} height={size} className="shrink-0">
+      <circle cx={size / 2} cy={size / 2} r={r - 6} fill="var(--charcoal)" />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        fill="none"
+        stroke="var(--card-deep)"
+        strokeWidth="2.5"
+      />
       <circle
         cx={size / 2}
         cy={size / 2}
         r={r}
         fill="none"
         stroke="var(--accent)"
-        strokeWidth="3.5"
+        strokeWidth="2.5"
         strokeLinecap="round"
         strokeDasharray={c}
         strokeDashoffset={c * (1 - pct)}
-        style={{ transition: "stroke-dashoffset 600ms cubic-bezier(.2,.7,.2,1)" }}
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        style={{ transition: "stroke-dashoffset 700ms cubic-bezier(.2,.7,.2,1)" }}
       />
       <text
         x="50%"
-        y="50%"
+        y="52%"
         textAnchor="middle"
         dominantBaseline="central"
-        fill="var(--ink)"
-        fontSize="12.5"
+        fill="#f6f6f3"
+        fontSize={size > 50 ? 13 : 11.5}
         fontWeight="600"
         fontFamily="var(--font-mono)"
-        transform={`rotate(90 ${size / 2} ${size / 2})`}
       >
         {score}
       </text>
@@ -212,10 +272,28 @@ export function CrewStrip({ crew }: { crew: CrewStatus[] }) {
             />
             <span className="text-[12.5px] font-semibold lowercase">{c.agent}</span>
           </div>
-          <p className="label mt-1 leading-snug" style={{ fontSize: 11 }}>
+          <p key={c.note} className="label log-in mt-1 leading-snug" style={{ fontSize: 11 }}>
             {c.status === "idle" ? CREW_META[c.agent] : c.note}
           </p>
         </div>
+      ))}
+    </div>
+  );
+}
+
+// The thinking feed — what the crew is doing, line by line.
+export function LogStream({ log, max = 5 }: { log: LogLine[]; max?: number }) {
+  const lines = log.slice(-max);
+  return (
+    <div className="space-y-1.5">
+      {lines.map((l, i) => (
+        <p
+          key={`${l.at}-${i}`}
+          className="log-in mono text-[12px] text-[var(--muted)]"
+          style={{ opacity: 0.45 + (0.55 * (i + 1)) / lines.length }}
+        >
+          <span className="text-[var(--accent)]">{l.agent}</span> · {l.msg}
+        </p>
       ))}
     </div>
   );
@@ -246,7 +324,7 @@ export function Evidence({ urls }: { urls: string[] }) {
     <span className="inline-flex flex-wrap gap-2.5">
       {urls.map((u, i) => (
         <a key={i} href={u} target="_blank" rel="noreferrer" className="link-green text-[11.5px]">
-          → evidence {i + 1}
+          <span className="arr">→</span> evidence {i + 1}
         </a>
       ))}
     </span>
