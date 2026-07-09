@@ -44,12 +44,26 @@ export async function runActor<T = unknown>(
 }
 
 // Heat triage input: cheapest possible read — latest posts, small cap.
+// NB: this actor's input schema is targetUrls/maxPosts (verified via its
+// openapi), unlike its siblings which use profiles/maxItems.
 export async function latestActivityDates(profileUrl: string) {
-  const items = await runActor<{ postedAt?: string }>("posts", {
-    profiles: [profileUrl],
-    maxItems: 5,
+  const items = await runActor<Record<string, unknown>>("posts", {
+    targetUrls: [profileUrl],
+    maxPosts: 5,
   });
-  return items?.flatMap((i) => (i.postedAt ? [i.postedAt] : [])) ?? null;
+  return (
+    items?.flatMap((i) => {
+      // postedAt is an object: { timestamp, date, postedAgoShort, … }
+      const raw = i.postedAt ?? i.postedDate ?? i.createdAt;
+      const v =
+        raw && typeof raw === "object"
+          ? ((raw as { date?: string; timestamp?: number }).date ??
+            (raw as { timestamp?: number }).timestamp)
+          : raw;
+      if (typeof v === "number") return [new Date(v).toISOString()];
+      return typeof v === "string" && v ? [v] : [];
+    }) ?? null
+  );
 }
 
 // X timeline via Apify (cheap path). Verified input schema: twitterHandles

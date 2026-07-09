@@ -222,7 +222,7 @@ async function buildWorldModel(model: BuyerWorldModel, mock: boolean) {
   const handle = model.prospect.x_handle;
   const [posts, comments, reactions, timeline, following, xTaste, appearances] =
     await Promise.all([
-      linkedin ? runActor("posts", { profiles: [linkedin], maxItems: 8 }) : null,
+      linkedin ? runActor("posts", { targetUrls: [linkedin], maxPosts: 8 }) : null,
       linkedin ? runActor("profileComments", { profiles: [linkedin], maxItems: 8 }) : null,
       linkedin ? runActor("profileReactions", { profiles: [linkedin], maxItems: 8 }) : null,
       handle ? xTimeline(handle) : null,
