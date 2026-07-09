@@ -27,25 +27,36 @@ export async function searchPeople(
 ): Promise<FoundPerson[] | null> {
   if (!process.env.FULLENRICH_API_KEY) return null;
   try {
+    // Documented shape (docs.fullenrich.com/api/v2/people/search): filters
+    // are TOP-LEVEL arrays of { value, exact_match, exclude } objects.
     const res = await fetch(`${BASE}/people/search`, {
       method: "POST",
       headers: headers(),
       body: JSON.stringify({
-        filters: { company_domains: [companyDomain], job_titles: titles },
         limit: 3,
+        current_company_domains: [
+          { value: companyDomain, exact_match: true, exclude: false },
+        ],
+        current_position_titles: titles.map((t) => ({
+          value: t,
+          exact_match: false,
+          exclude: false,
+        })),
       }),
       signal: AbortSignal.timeout(20_000),
     });
     if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
     const data = await res.json();
-    return (data.people ?? data.results ?? []).map(
-      (p: Record<string, string>) => ({
-        name: p.full_name ?? p.name ?? "",
-        title: p.job_title ?? p.title ?? "",
-        company: p.company_name ?? companyDomain,
-        linkedin_url: p.linkedin_url ?? "",
-      })
-    );
+    const rows = data.data ?? data.people ?? data.results ?? data.items ?? [];
+    return rows.map((p: Record<string, string>) => ({
+      name:
+        p.full_name ??
+        p.name ??
+        [p.first_name, p.last_name].filter(Boolean).join(" "),
+      title: p.current_position_title ?? p.job_title ?? p.title ?? "",
+      company: p.current_company_name ?? p.company_name ?? companyDomain,
+      linkedin_url: p.linkedin_url ?? "",
+    }));
   } catch (err) {
     console.error("[fullenrich:search]", err);
     return null;
@@ -71,16 +82,19 @@ export async function enrichContact(
     return FIXTURE_CONTACTS[person.id] ?? { email: "", phone: "" };
   }
   try {
+    // Documented shape (docs.fullenrich.com/api/v2/contact/enrich/bulk):
+    // top-level "data" array; snake_case first_name/last_name; each contact
+    // needs first+last + (domain OR company_name), or a linkedin_url.
     const [first, ...rest] = person.name.split(" ");
     const start = await fetch(`${BASE}/contact/enrich/bulk`, {
       method: "POST",
       headers: headers(),
       body: JSON.stringify({
         name: `gravity-${person.id}`,
-        datas: [
+        data: [
           {
-            firstname: first,
-            lastname: rest.join(" ") || first,
+            first_name: first,
+            last_name: rest.join(" ") || first,
             company_name: person.company,
             linkedin_url: person.linkedin_url || undefined,
             enrich_fields: enrichFields,
@@ -100,12 +114,18 @@ export async function enrichContact(
       });
       if (poll.status === 400) continue; // "try again in 30 seconds"
       const data = await poll.json();
-      const c = data.datas?.[0]?.contact ?? {};
-      if (data.status === "FINISHED" || c.most_probable_email) {
-        return {
-          email: c.most_probable_email ?? c.work_emails?.[0]?.email ?? "",
-          phone: c.phones?.[0]?.number ?? "",
-        };
+      // results live in data[] records under contact_info
+      const ci = data.data?.[0]?.contact_info ?? {};
+      const email =
+        ci.most_probable_work_email?.email ?? ci.work_emails?.[0]?.email ?? "";
+      const phone =
+        ci.most_probable_phone?.number ?? ci.phones?.[0]?.number ?? "";
+      if (data.status === "FINISHED" || email) {
+        return { email, phone };
+      }
+      if (["CANCELED", "CREDITS_INSUFFICIENT", "RATE_LIMIT"].includes(data.status)) {
+        console.error("[fullenrich:enrich] terminal status:", data.status);
+        return { email: "", phone: "" };
       }
     }
     return { email: "", phone: "" };
