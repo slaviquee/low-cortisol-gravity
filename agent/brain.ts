@@ -1,6 +1,8 @@
-// One seam for every model call, tried in order:
-//   1. managed crew agents (Agent SDK — API key OR Claude subscription login)
-//   2. direct Anthropic SDK (API key)
+// One seam for every model call. Spend-aware order:
+//   1. direct Anthropic SDK when an API key exists (one HTTPS call —
+//      cheap and fast; a managed-agent subprocess costs many turns)
+//   2. managed crew agents (Agent SDK) — the no-API-key path, riding a
+//      Claude subscription login
 //   3. null → caller uses fixtures (mock never blocks)
 
 import { generateText, hasClaude, MODEL_DEEP, MODEL_FAST } from "./claude";
@@ -11,14 +13,17 @@ export async function think(
   task: string,
   opts?: { deep?: boolean }
 ): Promise<string | null> {
-  const viaManaged = await managedText(agent, task);
-  if (viaManaged) return viaManaged;
+  if (process.env.GRAVITY_MOCK) return null;
 
-  if (!hasClaude() || process.env.GRAVITY_MOCK) return null;
-  return generateText({
-    system: CREW[agent].prompt,
-    prompt: task,
-    model: opts?.deep ? MODEL_DEEP : MODEL_FAST,
-    maxTokens: opts?.deep ? 1500 : 400,
-  });
+  if (hasClaude()) {
+    const direct = await generateText({
+      system: CREW[agent].prompt,
+      prompt: task,
+      model: opts?.deep ? MODEL_DEEP : MODEL_FAST,
+      maxTokens: opts?.deep ? 1500 : 400,
+    });
+    if (direct) return direct;
+  }
+
+  return managedText(agent, task);
 }

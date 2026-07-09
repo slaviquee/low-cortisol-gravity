@@ -65,7 +65,18 @@ export function emptyBrain(): CompanyBrain {
   };
 }
 
-let writeQueue: Promise<void> = Promise.resolve();
+// Shared, error-isolated write queue on globalThis — same reasoning as
+// lib/store.ts: route bundles must serialize through one chain, and one
+// failed write must not poison the rest.
+const g = globalThis as unknown as { __gravityBrainQueue?: Promise<unknown> };
+g.__gravityBrainQueue ??= Promise.resolve();
+
+function enqueue<T>(task: () => Promise<T>): Promise<T> {
+  const run = () => task();
+  const p = (g.__gravityBrainQueue as Promise<unknown>).then(run, run);
+  g.__gravityBrainQueue = p.catch(() => {});
+  return p;
+}
 
 export async function getBrain(): Promise<CompanyBrain> {
   try {
@@ -75,18 +86,16 @@ export async function getBrain(): Promise<CompanyBrain> {
   }
 }
 
-export async function updateBrain(
+export function updateBrain(
   fn: (b: CompanyBrain) => CompanyBrain | void
 ): Promise<CompanyBrain> {
-  let next: CompanyBrain = emptyBrain();
-  writeQueue = writeQueue.then(async () => {
+  return enqueue(async () => {
     const b = await getBrain();
-    next = (fn(b) ?? b) as CompanyBrain;
+    const next = (fn(b) ?? b) as CompanyBrain;
     await fs.mkdir(DIR, { recursive: true });
     await fs.writeFile(FILE, JSON.stringify(next, null, 2));
+    return next;
   });
-  await writeQueue;
-  return next;
 }
 
 export function learn(

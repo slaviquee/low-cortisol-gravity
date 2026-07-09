@@ -73,7 +73,7 @@ export async function xTweetsViaApify(handle: string, max = 50) {
 
 // X following list via Apify (~100× cheaper than X API for follows).
 // Verified input schema: twitterHandles + relation.
-export async function xFollowingViaApify(handle: string, max = 500) {
+export async function xFollowingViaApify(handle: string, max = 50) {
   const clean = handle.replace(/^@/, "");
   const items = await runActor<Record<string, unknown>>("xFollowing", {
     twitterHandles: [clean],
@@ -91,14 +91,15 @@ export async function xFollowingViaApify(handle: string, max = 500) {
 
 // Radar: who engaged with OUR post.
 export async function postEngagement(postUrl: string) {
+  // demo caps: 30+30 covers any hackathon-day post at ~$0.12/scan
   const [reactions, comments] = await Promise.all([
     runActor<{ name?: string; headline?: string; profileUrl?: string; reactionType?: string }>(
       "postReactions",
-      { posts: [postUrl], maxItems: 100 }
+      { posts: [postUrl], maxItems: 30 }
     ),
     runActor<{ name?: string; headline?: string; profileUrl?: string; text?: string }>(
       "postComments",
-      { posts: [postUrl], maxItems: 100 }
+      { posts: [postUrl], maxItems: 30 }
     ),
   ]);
   return { reactions: reactions ?? [], comments: comments ?? [] };

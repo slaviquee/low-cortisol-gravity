@@ -101,10 +101,24 @@ export async function managedText(
       prompt: `Use the ${agentName} agent for this task and return its output verbatim as your final answer.\n\n${task}`,
       options: {
         agents: CREW,
-        allowedTools: ["Agent", "WebFetch"],
+        allowedTools: ["Agent", "WebFetch", "mcp__sillage__*"],
+        // Sillage MCP (docs/mcp/install): OAuth 2.1 interactive — the SDK
+        // "doesn't handle OAuth flows automatically", so this only connects
+        // where a login/token exists. Gated to avoid 30s connect timeouts
+        // on headless boxes; enable with SILLAGE_MCP=1 at the venue.
+        ...(process.env.SILLAGE_MCP === "1"
+          ? {
+              mcpServers: {
+                sillage: {
+                  type: "http" as const,
+                  url: "https://api.getsillage.com/api/mcp/v2",
+                },
+              },
+            }
+          : {}),
         settingSources: [], // headless: ignore ~/.claude and .claude/* settings
         permissionMode: "dontAsk",
-        maxTurns: 12,
+        maxTurns: 4, // delegate → answer needs 2-3 turns; cap the spend
         cwd: process.cwd(),
       },
     })) {
@@ -140,7 +154,7 @@ export async function managedJSON<T>(
         allowedTools: ["Agent", "WebFetch"],
         settingSources: [],
         permissionMode: "dontAsk",
-        maxTurns: 12,
+        maxTurns: 4, // bounded — schema output needs few turns
         cwd: process.cwd(),
         outputFormat: { type: "json_schema", schema },
       },

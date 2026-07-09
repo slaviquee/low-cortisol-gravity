@@ -55,12 +55,17 @@ export async function searchPeople(
 // Just-in-time enrichment. Real mode: bulk endpoint + poll (the
 // hackathon-localhost choice — no webhook tunnel). Mock: fixture contacts
 // after a short delay so the UI shows the "verifying contact…" beat.
-export async function enrichContact(person: {
-  id: string;
-  name: string;
-  company: string;
-  linkedin_url: string;
-}): Promise<{ email: string; phone: string }> {
+// Spend rule: emails are 1 credit, phones are 10. Default to email-only;
+// only the Warm flow (real intent to call) asks for the phone.
+export async function enrichContact(
+  person: {
+    id: string;
+    name: string;
+    company: string;
+    linkedin_url: string;
+  },
+  enrichFields: string[] = ["contact.work_emails"]
+): Promise<{ email: string; phone: string }> {
   if (!process.env.FULLENRICH_API_KEY) {
     await new Promise((r) => setTimeout(r, 1500));
     return FIXTURE_CONTACTS[person.id] ?? { email: "", phone: "" };
@@ -78,7 +83,7 @@ export async function enrichContact(person: {
             lastname: rest.join(" ") || first,
             company_name: person.company,
             linkedin_url: person.linkedin_url || undefined,
-            enrich_fields: ["contact.work_emails", "contact.phones"],
+            enrich_fields: enrichFields,
           },
         ],
       }),

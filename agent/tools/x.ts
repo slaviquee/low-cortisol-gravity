@@ -49,8 +49,9 @@ export async function xFollowing(handle: string): Promise<unknown[] | null> {
     }).then((r) => r.json());
     const id = user?.data?.id;
     if (!id) return null;
+    // demo cap: 50 follows reads ($0.50 worst case) demo identically to 500
     const following = await fetch(
-      `https://api.x.com/2/users/${id}/following?max_results=200`,
+      `https://api.x.com/2/users/${id}/following?max_results=50`,
       { headers: { authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(15_000) }
     ).then((r) => r.json());
     return following?.data ?? null;

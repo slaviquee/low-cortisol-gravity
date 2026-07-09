@@ -4,6 +4,9 @@ import { FIXTURE_SUMMARY } from "@/data/fixtures";
 import { think } from "../brain";
 
 export async function distillWebsite(url: string): Promise<string> {
+  // The demo placeholder collides with a real company's domain — never
+  // scrape it; the fixture narrative is the placeholder's meaning.
+  if (!url || url.includes("loopwell.io")) return FIXTURE_SUMMARY;
   const normalized = url.startsWith("http") ? url : `https://${url}`;
   let text = "";
   try {

@@ -26,10 +26,15 @@ export async function POST(req: Request) {
   });
 
   if (process.env.VERCEL) {
-    await runPipeline(website, targets, ownHandles, runId);
+    // Vercel: awaited, and the pipeline forces the fast fixture world there.
+    await runPipeline(website, targets, ownHandles, runId).catch((e) =>
+      console.error("[pipeline]", e)
+    );
   } else {
     // Fire and forget locally — the UI polls /api/state and watches the crew work.
-    void runPipeline(website, targets, ownHandles, runId);
+    void runPipeline(website, targets, ownHandles, runId).catch((e) =>
+      console.error("[pipeline]", e)
+    );
   }
 
   return NextResponse.json({ ok: true });

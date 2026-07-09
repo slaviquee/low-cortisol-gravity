@@ -90,9 +90,18 @@ and gives the AE a call script for the post-engaged buyer.
   (`claude setup-token`), with direct `@anthropic-ai/sdk` as fallback;
   sponsor MCPs connect through the same SDK
   (`api.getsillage.com/api/mcp/v2`, `mcp.fullenrich.com/mcp`)
-- **Sillage** — Champion/Competitor/Hiring signal agents, keyword runs,
-  named-people company mappings (their open-source skills pack drives setup:
-  `npx skills add sillage-labs/skills`)
+- **Sillage** — wired per their docs: headless = the documented REST API
+  (`sk_live_`, real paths: `PUT /api/v2/persona`,
+  `POST /api/v2/top-account-list/accounts`, `GET /api/v2/company-mappings`);
+  interactive = their MCP (`SILLAGE_MCP=1` attaches
+  `api.getsillage.com/api/mcp/v2` to the managed crew — OAuth 2.1 login);
+  their skills pack is installed in-repo (`npx skills add sillage-labs/skills`
+  → `.claude/skills/`), incl. `sillage-api`, their designed headless pairing
+- **Demo spend guards** — a full live demo run stays in pocket-change
+  territory: 5 accounts resolved, 3 people per mapping, email-only
+  enrichment (phones only at Warm), 3 enrichments + 20 events per scan,
+  serendipity deduped across rescans, 50-cap follows, 30+30 post
+  engagement, one 4k-char transcript for the hottest prospect only
 - **FullEnrich** — synchronous people search + async bulk enrichment,
   fired just-in-time: contact data is bought only at the moment of intent
 - **Apify** — cookie-free LinkedIn actors by

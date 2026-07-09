@@ -31,7 +31,7 @@ import {
 } from "@/lib/types";
 import { think } from "./brain";
 import { generateJSON, hasClaude, MODEL_DEEP, MODEL_FAST } from "./claude";
-import { managedAvailable } from "./managed";
+import { managedAvailable, managedJSON } from "./managed";
 import { GRAVITY_MAP_SYSTEM, PLAN_SYSTEM, WORLD_MODEL_SYSTEM } from "./prompts";
 import { latestActivityDates, postEngagement, runActor } from "./tools/apify";
 import { enrichContact, searchPeople, type FoundPerson } from "./tools/fullenrich";
@@ -82,7 +82,11 @@ function signalsForPerson(
 }
 
 function heatFromDates(dates: string[] | null) {
-  if (!dates?.length) return 18;
+  // null = no data source (e.g. no APIFY_TOKEN) — assume modelable rather
+  // than burying every prospect in low-orbit; [] = source worked, they
+  // genuinely don't post.
+  if (dates === null) return 38;
+  if (!dates.length) return 18;
   const newest = dates
     .map((d) => Date.parse(d))
     .filter(Number.isFinite)
@@ -131,7 +135,9 @@ async function resolveProspects(
 ): Promise<BuyerWorldModel[]> {
   if (mock) return fixtureProspects();
   const people: Array<FoundPerson & { account: string }> = [];
-  for (const account of targets.slice(0, 10)) {
+  // demo cap: 5 accounts (user-entered ones lead the merge, so the demoed
+  // companies always make the cut) — halves mapping/search spend
+  for (const account of targets.slice(0, 5)) {
     const [mapped, searched] = await Promise.all([
       getCompanyMapping(account),
       account.includes(".") ? searchPeople(account, TITLES) : Promise.resolve(null),
@@ -226,30 +232,40 @@ async function buildWorldModel(model: BuyerWorldModel, mock: boolean) {
         : null,
       findMediaAppearances(model.prospect.name, model.prospect.company),
     ]);
-  const transcript = appearances?.[0]?.url ? await transcribe(appearances[0].url) : null;
-  const generated = await generateJSON<{
+  // Spend guard: transcribe at most the hottest prospects' first appearance,
+  // and never feed a full episode into the prompt.
+  const transcriptRaw =
+    appearances?.[0]?.url && model.heat >= 75
+      ? await transcribe(appearances[0].url)
+      : null;
+  const transcript = transcriptRaw?.slice(0, 4000) ?? null;
+  type WorldGen = {
     topics: BuyerWorldModel["topics"];
     formats: string[];
     media: BuyerWorldModel["media"];
     influencers: BuyerWorldModel["influencers"];
     behavior: BuyerWorldModel["behavior"];
-  }>({
-    model: MODEL_FAST,
-    system: WORLD_MODEL_SYSTEM,
-    schema: worldSchema,
-    prompt: `Prospect: ${JSON.stringify(model.prospect)}
+  };
+  const worldPrompt = `Prospect: ${JSON.stringify(model.prospect)}
 Signals: ${JSON.stringify(model.signals)}
 LinkedIn posts: ${JSON.stringify(posts ?? [])}
 LinkedIn comments: ${JSON.stringify(comments ?? [])}
 LinkedIn reactions: ${JSON.stringify(reactions ?? [])}
-X timeline: ${JSON.stringify(timeline ?? [])}
-X following: ${JSON.stringify(following ?? [])}
+X timeline: ${JSON.stringify((timeline ?? []).slice(0, 15))}
+X following: ${JSON.stringify((following ?? []).slice(0, 30))}
 X semantic read: ${xTaste ?? ""}
 Spoken web transcript: ${transcript ?? ""}
 
-Return only evidence-backed buyer taste signals. If evidence is weak, say so with sparse topics rather than inventing.`,
-    maxTokens: 2500,
-  });
+Return only evidence-backed buyer taste signals. If evidence is weak, say so with sparse topics rather than inventing.`;
+  // direct API first; managed-agent fallback covers subscription-only auth
+  const generated =
+    (await generateJSON<WorldGen>({
+      model: MODEL_FAST,
+      system: WORLD_MODEL_SYSTEM,
+      schema: worldSchema,
+      prompt: worldPrompt,
+      maxTokens: 2500,
+    })) ?? (await managedJSON<WorldGen>("listener", worldPrompt, worldSchema));
   if (!generated) return { ...model, state: "modeled" as const };
   return {
     ...model,
@@ -440,7 +456,12 @@ export async function runPipeline(
   ownHandles?: string,
   runId?: string
 ) {
-  const mock = forcedMock() || (!hasClaude() && !managedAvailable());
+  // Vercel serves the safe deterministic demo (per README) — its serverless
+  // filesystem can't hold live state, so force the fixture world there.
+  const mock =
+    forcedMock() ||
+    Boolean(process.env.VERCEL) ||
+    (!hasClaude() && !managedAvailable());
   const mark = (agent: CrewAgent, status: "running" | "done", note: string) =>
     crewForRun(runId, agent, status, note);
 
@@ -528,18 +549,22 @@ export async function runPipeline(
   );
 
   // Low-orbit path IS email: fetch their emails right away (JIT rule).
-  for (const p of quiet) {
+  // Spend cap: first 3 quiet prospects, email-only (1 credit each) — the
+  // low-orbit lane never shows more than that in a demo.
+  for (const p of quiet.slice(0, 3)) {
     enrichContact({
       id: p.id,
       name: p.prospect.name,
       company: p.prospect.company,
       linkedin_url: p.prospect.linkedin_url,
-    }).then((c) =>
-      updateRunState(runId, (s) => {
-        const target = s.prospects.find((x) => x.id === p.id);
-        if (target && c.email) target.contact.emails = [c.email];
-      })
-    );
+    })
+      .then((c) =>
+        updateRunState(runId, (s) => {
+          const target = s.prospects.find((x) => x.id === p.id);
+          if (target && c.email) target.contact.emails = [c.email];
+        })
+      )
+      .catch((e) => console.error("[low-orbit enrich]", e));
   }
 
   // ── Listener: one subagent per hot prospect, in parallel (world models)
@@ -554,6 +579,7 @@ export async function runPipeline(
       if (target) {
         target.topics = full.topics;
         target.formats = full.formats;
+        target.media = full.media;
         target.influencers = full.influencers;
         target.behavior = full.behavior;
         target.state = "modeled";
@@ -581,6 +607,7 @@ export async function runPipeline(
   // ── Strategist: Gravity Map → taste cohorts → the week's plan
   await mark("strategist", "running", "synthesizing the Gravity Map across the ICP…");
   await sleep(mock ? 2500 : 500);
+  const gravityPrompt = `Product: ${summary}\n\nBuyer World Models:\n${JSON.stringify(prospects)}`;
   const gravity =
     mock
       ? FIXTURE_GRAVITY_MAP
@@ -588,9 +615,11 @@ export async function runPipeline(
           model: MODEL_DEEP,
           system: GRAVITY_MAP_SYSTEM,
           schema: gravitySchema,
-          prompt: `Product: ${summary}\n\nBuyer World Models:\n${JSON.stringify(prospects)}`,
+          prompt: gravityPrompt,
           maxTokens: 2500,
-        })) ?? FIXTURE_GRAVITY_MAP;
+        })) ??
+        (await managedJSON<GravityMap>("strategist", gravityPrompt, gravitySchema)) ??
+        FIXTURE_GRAVITY_MAP;
   await updateRunState(runId, (s) => {
     s.gravity_map = gravity;
   });
@@ -611,27 +640,29 @@ export async function runPipeline(
   );
   await mark("strategist", "running", "drafting the gravity plan: posts · comments · micro-actions…");
   await sleep(mock ? 2500 : 500);
-  const generatedPlan =
-    mock
-      ? null
-      : await generateJSON<{ items: Omit<PlanItem, "id" | "done">[] }>({
-          model: MODEL_DEEP,
-          system: PLAN_SYSTEM,
-          schema: planSchema,
-          prompt: `Product: ${summary}
+  const planPrompt = `Product: ${summary}
 Gravity map: ${JSON.stringify(gravity)}
 Cohorts: ${JSON.stringify(cohorts)}
 Buyer World Models: ${JSON.stringify(prospects)}
 Brain: ${brainDigest(await getBrain())}
 
-Create a 5-day plan with posts, comments, reacts/follows/connects. Each item targets one cohort and cites evidence.`,
-          maxTokens: 3500,
-        });
+Create a 5-day plan with posts, comments, reacts/follows/connects. Each item targets one cohort and cites evidence.`;
+  type PlanGen = { items: Omit<PlanItem, "id" | "done">[] };
+  const generatedPlan = mock
+    ? null
+    : ((await generateJSON<PlanGen>({
+        model: MODEL_DEEP,
+        system: PLAN_SYSTEM,
+        schema: planSchema,
+        prompt: planPrompt,
+        maxTokens: 3500,
+      })) ?? (await managedJSON<PlanGen>("strategist", planPrompt, planSchema)));
   const plan = generatedPlan?.items?.length
     ? generatedPlan.items.map((item, i) => ({
+        // spread FIRST so a model-emitted id/done can't override ours
+        ...item,
         id: `live-${i + 1}-${slug(item.title)}`,
         done: false,
-        ...item,
       }))
     : mock
       ? fixturePlan()
@@ -691,12 +722,19 @@ let scriptCursor = 0;
 // published post URLs, matched against the target list the same way.
 export async function radarScan(postUrls: string[] = []): Promise<string> {
   const urls = postUrls.map((u) => u.trim()).filter(Boolean);
-  if (!forcedMock() && urls.length && process.env.APIFY_TOKEN) {
-    return liveRadarScan(urls);
-  }
   const current = await getState();
-  if (!forcedMock() && !current.mock && !urls.length) {
-    return "Paste at least one published LinkedIn/X post URL so Radar can scan live engagement.";
+  // Capability-based routing: scripted beats belong to the fixture world
+  // only — never inject fictional engagement into a live-modeled board.
+  const fixtureWorld = current.prospects.some((p) => p.id === "jane-kowalski");
+  const scripted = forcedMock() || current.mock || (!process.env.APIFY_TOKEN && fixtureWorld);
+  if (!scripted) {
+    if (!urls.length) {
+      return "Paste at least one published LinkedIn/X post URL so Radar can scan live engagement.";
+    }
+    if (!process.env.APIFY_TOKEN) {
+      return "Radar needs APIFY_TOKEN to scan live post engagement — add the key, or run the demo world (GRAVITY_MOCK=1).";
+    }
+    return liveRadarScan(urls);
   }
   const beat = ENGAGEMENT_SCRIPT[scriptCursor];
   if (!beat) return "No new engagement since last scan.";
@@ -832,17 +870,31 @@ export async function radarScan(postUrls: string[] = []): Promise<string> {
   return `Serendipity: ${st.name} (${st.company}) engaged, fits ICP → added to warm queue`;
 }
 
+// normalize URLs before matching: Apify and Sillage/FullEnrich format
+// linkedin.com URLs differently (protocol, www, trailing slash, case)
+const normUrl = (u: string) =>
+  u.toLowerCase().replace(/^https?:\/\/(www\.)?/, "").replace(/\/+$/, "");
+
 async function liveRadarScan(postUrls: string[]): Promise<string> {
-  await updateState((s) => {
+  const state = await updateState((s) => {
     s.input.own_post_urls = Array.from(
       new Set([...(s.input.own_post_urls ?? []), ...postUrls])
     );
   });
+  // Positional attribution: the i-th published URL maps to the i-th
+  // post-type plan item — cohort meters + brain content_performance stay
+  // alive in live mode, same as the scripted path.
+  const postItems = state.plan.filter((p) => p.type === "post" || p.type === "blog");
+  const urlOrder = state.input.own_post_urls ?? [];
+
   let seen = 0;
   let warm = 0;
+  let enrichBudget = 3; // hard cap on paid enrichments per scan
   for (const url of postUrls) {
+    const planItem = postItems[urlOrder.indexOf(url)] ?? postItems[0];
     const engagement = await postEngagement(url);
     const events = [
+      // comments first — they carry quotes and trigger serendipity
       ...engagement.comments.map((c) => ({
         name: c.name ?? "",
         headline: c.headline ?? "",
@@ -857,7 +909,9 @@ async function liveRadarScan(postUrls: string[]): Promise<string> {
         kind: "reaction" as const,
         quote: "",
       })),
-    ].filter((e) => e.name || e.profileUrl);
+    ]
+      .filter((e) => e.name || e.profileUrl)
+      .slice(0, 20); // per-post event cap — a demo never needs more
     for (const e of events) {
       seen++;
       let matched = "";
@@ -871,7 +925,9 @@ async function liveRadarScan(postUrls: string[]): Promise<string> {
       await updateState((s) => {
         const p = s.prospects.find(
           (x) =>
-            (e.profileUrl && x.prospect.linkedin_url === e.profileUrl) ||
+            (e.profileUrl &&
+              x.prospect.linkedin_url &&
+              normUrl(x.prospect.linkedin_url) === normUrl(e.profileUrl)) ||
             (e.name && x.prospect.name.toLowerCase() === e.name.toLowerCase())
         );
         if (!p) return;
@@ -905,12 +961,34 @@ async function liveRadarScan(postUrls: string[]): Promise<string> {
           msg: `${p.prospect.name} ${event.kind === "comment" ? "commented on" : "reacted to"} your live post`,
         });
       });
+      // per-cohort + brain attribution, mirroring the scripted path
+      if (matched) {
+        if (planItem?.cohort) {
+          await updateState((s) => {
+            const c = s.cohorts.find((x) => x.id === planItem.cohort);
+            if (c) {
+              c.engagements++;
+              if (becameWarm) c.warm++;
+            }
+          });
+        }
+        await updateBrain((b) =>
+          bumpContent(
+            b,
+            planItem?.id ?? url,
+            planItem?.title ?? url,
+            planItem?.media ?? "post",
+            e.kind
+          )
+        );
+      }
       if (matched && becameWarm) {
         warm++;
-        await warmFlow(matched, event.quote);
+        if (enrichBudget-- > 0) await warmFlow(matched, event.quote);
         continue;
       }
-      if (!matched && e.kind === "comment") {
+      if (!matched && e.kind === "comment" && enrichBudget > 0) {
+        enrichBudget--;
         warm++;
         await addSerendipityWarm(e.name, e.headline, e.profileUrl, event);
       }
@@ -942,7 +1020,14 @@ async function addSerendipityWarm(
     called: false,
     meeting: false,
   };
+  // Dedupe: rescanning the same post must never re-create the card or
+  // re-spend enrichment credits on the same stranger.
+  let duplicate = false;
   await updateState((s) => {
+    if (s.warm.some((w) => w.id === card.id)) {
+      duplicate = true;
+      return;
+    }
     s.warm.unshift(card);
     s.log.push({
       at: new Date().toISOString(),
@@ -950,6 +1035,7 @@ async function addSerendipityWarm(
       msg: `${card.name} engaged on a live post — enriching for warm follow-up`,
     });
   });
+  if (duplicate) return;
   const contact = await enrichContact({
     id,
     name: card.name,
@@ -999,12 +1085,16 @@ async function warmFlow(prospectId: string, quote?: string) {
   });
   if (!p) return;
 
-  const contact = await enrichContact({
-    id: prospectId,
-    name: p.prospect.name,
-    company: p.prospect.company,
-    linkedin_url: p.prospect.linkedin_url,
-  });
+  // Warm = real intent to call — the ONE place we buy the phone (10 cr).
+  const contact = await enrichContact(
+    {
+      id: prospectId,
+      name: p.prospect.name,
+      company: p.prospect.company,
+      linkedin_url: p.prospect.linkedin_url,
+    },
+    ["contact.work_emails", "contact.phones"]
+  );
   const drafts = await draftOutreach(p.prospect.name, p.prospect.title, quote ?? "", p);
   const call = await draftCallScript(p.prospect.name, p.prospect.title, quote ?? "", contact.phone);
   await updateState((s) => {
