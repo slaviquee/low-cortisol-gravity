@@ -284,15 +284,16 @@ export default function Landing() {
 
   return (
     <div className="rise mx-auto max-w-xl pt-4">
-      <GravityHero />
+      <div className="relative">
+        <div
+          aria-hidden
+          className="gradient-warm pointer-events-none left-1/2 top-1/2 h-36 w-80 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-25 blur-2xl"
+          style={{ position: "absolute" }}
+        />
+        <GravityHero />
+      </div>
 
-      <p className="mono mt-6 text-center text-[12px] leading-relaxed text-[var(--muted)]">
-        cold outreach is dying — every inbox is the same
-        <br />
-        ai-written &quot;personalization&quot;, and reply rates show it.
-      </p>
-
-      <h1 className="mt-4 text-center text-[38px] font-semibold leading-[1.08] tracking-[-0.03em]">
+      <h1 className="mt-6 text-center text-[38px] font-semibold leading-[1.08] tracking-[-0.03em]">
         Make your buyers discover you
         <br />
         before the first contact.
@@ -343,7 +344,20 @@ export default function Landing() {
         </div>
       </details>
 
-      <div className="mt-8">
+      <p className="mono mt-9 text-center text-[12px] leading-relaxed text-[var(--muted)]">
+        cold outreach is dying — every inbox is the same
+        <br />
+        ai-written &quot;personalization&quot;, and reply rates show it.
+        <br />
+        <span className="text-[var(--ink)]">here&apos;s what gravity does instead:</span>
+      </p>
+
+      <div
+        aria-hidden
+        className="gradient-warm mx-auto mt-6 h-[5px] w-24 rounded-full"
+      />
+
+      <div className="mt-6">
         <DemoStage />
       </div>
       <p className="label mt-3 text-center" style={{ fontSize: 11 }}>
