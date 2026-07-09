@@ -144,7 +144,7 @@ export function GravityHero() {
       width="300"
       height="190"
       viewBox="0 0 300 190"
-      className="mx-auto block"
+      className="relative mx-auto block"
       aria-hidden
     >
       <ellipse cx="150" cy="95" rx="142" ry="82" fill="none" stroke="var(--faint)" strokeWidth="1" strokeDasharray="2 6" />

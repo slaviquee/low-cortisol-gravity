@@ -352,11 +352,6 @@ export default function Landing() {
         <span className="text-[var(--ink)]">here&apos;s what gravity does instead:</span>
       </p>
 
-      <div
-        aria-hidden
-        className="gradient-warm mx-auto mt-6 h-[5px] w-24 rounded-full"
-      />
-
       <div className="mt-6">
         <DemoStage />
       </div>
