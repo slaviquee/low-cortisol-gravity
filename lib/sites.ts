@@ -92,6 +92,10 @@ export async function archiveActiveState(): Promise<void> {
 // sites dir so the switcher is always populated, and default the active
 // board to buildgravity. A marker file makes this idempotent, and it only
 // touches state when it's pristine, so a real run is never clobbered.
+// Bump on any change to the seed content/shape. Railway mounts a PERSISTENT
+// volume, so the marker survives redeploys — a version bump is what forces a
+// fresh re-seed (and cleans stale artifacts like the old global brain).
+const SEED_VERSION = "3";
 let seedChecked = false;
 const DEFAULT_ACTIVE = "buildgravity.co";
 
@@ -102,11 +106,22 @@ export async function ensureSeeded(): Promise<void> {
     await fs.mkdir(SITES_DIR, { recursive: true });
     const marker = path.join(SITES_DIR, ".seeded");
     try {
-      await fs.access(marker);
-      return; // already seeded this container
+      if ((await fs.readFile(marker, "utf8")).trim() === SEED_VERSION) {
+        return; // already at this seed version
+      }
     } catch {
-      /* not seeded yet */
+      /* no marker yet */
     }
+    // Fresh (re-)seed: wipe any prior snapshots — including stale/leftover
+    // runs — so the roster is exactly the deterministic demo set.
+    try {
+      for (const f of await fs.readdir(SITES_DIR)) {
+        if (f.endsWith(".json")) await fs.unlink(path.join(SITES_DIR, f));
+      }
+    } catch {
+      /* nothing to clean */
+    }
+    const specByHero = ALL_SPECS.find((s) => s.website === DEFAULT_ACTIVE);
     await Promise.all(
       ALL_SPECS.flatMap((spec) => {
         const s = siteSlug(spec.website);
@@ -122,17 +137,15 @@ export async function ensureSeeded(): Promise<void> {
         ];
       })
     );
-    const active = await getState();
-    if (!active.input.website) {
-      const hero =
-        ALL_SPECS.find((s) => s.website === DEFAULT_ACTIVE) ?? ALL_SPECS[0];
-      if (hero) {
-        await setState(buildWorld(hero));
-        const b = buildBrain(hero);
-        await updateBrain(() => b);
-      }
+    // Land on buildgravity with a matching, clean brain — force it so the
+    // stale artifact brain from earlier runs is overwritten.
+    const hero = specByHero ?? ALL_SPECS[0];
+    if (hero) {
+      await setState(buildWorld(hero));
+      const b = buildBrain(hero);
+      await updateBrain(() => b);
     }
-    await fs.writeFile(marker, new Date().toISOString());
+    await fs.writeFile(marker, SEED_VERSION);
   } catch (err) {
     console.error("[seed]", err);
   }
