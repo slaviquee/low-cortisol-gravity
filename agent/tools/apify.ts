@@ -92,15 +92,28 @@ export async function xFollowingViaApify(handle: string, max = 50) {
 // Radar: who engaged with OUR post.
 export async function postEngagement(postUrl: string) {
   // demo caps: 30+30 covers any hackathon-day post at ~$0.12/scan
+  // harvestapi shape (verified live): engager lives under `actor`
+  // { actor: { name, linkedinUrl, position }, commentary, reactionType }
+  type Raw = {
+    name?: string;
+    headline?: string;
+    profileUrl?: string;
+    text?: string;
+    commentary?: string;
+    actor?: { name?: string; linkedinUrl?: string; position?: string };
+  };
   const [reactions, comments] = await Promise.all([
-    runActor<{ name?: string; headline?: string; profileUrl?: string; reactionType?: string }>(
-      "postReactions",
-      { posts: [postUrl], maxItems: 30 }
-    ),
-    runActor<{ name?: string; headline?: string; profileUrl?: string; text?: string }>(
-      "postComments",
-      { posts: [postUrl], maxItems: 30 }
-    ),
+    runActor<Raw>("postReactions", { posts: [postUrl], maxItems: 30 }),
+    runActor<Raw>("postComments", { posts: [postUrl], maxItems: 30 }),
   ]);
-  return { reactions: reactions ?? [], comments: comments ?? [] };
+  const norm = (r: Raw) => ({
+    name: r.actor?.name ?? r.name ?? "",
+    headline: r.actor?.position ?? r.headline ?? "",
+    profileUrl: r.actor?.linkedinUrl ?? r.profileUrl ?? "",
+    text: r.commentary ?? r.text ?? "",
+  });
+  return {
+    reactions: (reactions ?? []).map(norm),
+    comments: (comments ?? []).map(norm),
+  };
 }

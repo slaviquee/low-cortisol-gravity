@@ -47,16 +47,31 @@ export async function searchPeople(
     });
     if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
     const data = await res.json();
-    const rows = data.data ?? data.people ?? data.results ?? data.items ?? [];
-    return rows.map((p: Record<string, string>) => ({
-      name:
-        p.full_name ??
-        p.name ??
-        [p.first_name, p.last_name].filter(Boolean).join(" "),
-      title: p.current_position_title ?? p.job_title ?? p.title ?? "",
-      company: p.current_company_name ?? p.company_name ?? companyDomain,
-      linkedin_url: p.linkedin_url ?? "",
-    }));
+    // verified live: rows under `people`; title inside `employment`;
+    // linkedin inside `social_profiles`
+    const rows = data.people ?? data.data ?? data.results ?? data.items ?? [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return rows.map((p: any) => {
+      const emp = Array.isArray(p.employment) ? p.employment[0] : p.employment;
+      const socials = Array.isArray(p.social_profiles)
+        ? p.social_profiles
+        : Object.entries(p.social_profiles ?? {}).map(([k, v]) => ({
+            type: k,
+            url: v,
+          }));
+      const li = socials.find((s: { type?: string; network?: string; url?: string }) =>
+        /linkedin/i.test(`${s?.type ?? ""} ${s?.network ?? ""} ${s?.url ?? ""}`)
+      );
+      return {
+        name:
+          p.full_name ??
+          [p.first_name, p.last_name].filter(Boolean).join(" ") ??
+          "",
+        title: emp?.title ?? emp?.position ?? p.title ?? "",
+        company: emp?.company_name ?? emp?.company ?? companyDomain,
+        linkedin_url: (typeof li?.url === "string" ? li.url : "") || p.linkedin_url || "",
+      };
+    });
   } catch (err) {
     console.error("[fullenrich:search]", err);
     return null;

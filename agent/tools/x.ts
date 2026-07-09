@@ -76,7 +76,7 @@ export async function xSearch(
         authorization: `Bearer ${key}`,
       },
       body: JSON.stringify({
-        model: "grok-4.1-fast",
+        model: "grok-4-fast",
         input: question,
         tools: [
           {

@@ -22,7 +22,7 @@ export async function findMediaAppearances(
         authorization: `Bearer ${key}`,
       },
       body: JSON.stringify({
-        model: "grok-4.1-fast",
+        model: "grok-4-fast",
         input: `Find podcast episodes, YouTube videos, or conference talks featuring ${name} (${company}). Return only real appearances as lines of "title | url". If none, return "none".`,
         tools: [{ type: "web_search" }],
       }),
