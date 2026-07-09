@@ -10,7 +10,7 @@ export async function distillWebsite(url: string): Promise<string> {
   try {
     const res = await fetch(normalized, {
       headers: { "user-agent": "GravityScout/0.1 (+hackathon demo)" },
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(4000),
     });
     const html = await res.text();
     text = html

@@ -1,5 +1,7 @@
 // Hackathon-grade persistence: one JSON file under data/runtime/.
-// Survives dev-server reloads, trivially inspectable, zero deps.
+// IMPORTANT: in Next dev each API route bundles its own module instance,
+// so module-level caches diverge across routes. The FILE is the single
+// source of truth — always read from disk, keep only a write queue.
 
 import { promises as fs } from "fs";
 import path from "path";
@@ -8,22 +10,18 @@ import { AppState, emptyState } from "./types";
 const DIR = path.join(process.cwd(), "data", "runtime");
 const FILE = path.join(DIR, "state.json");
 
-let cache: AppState | null = null;
 let writeQueue: Promise<void> = Promise.resolve();
 
 export async function getState(): Promise<AppState> {
-  if (cache) return cache;
   try {
     const raw = await fs.readFile(FILE, "utf8");
-    cache = JSON.parse(raw) as AppState;
+    return JSON.parse(raw) as AppState;
   } catch {
-    cache = emptyState();
+    return emptyState();
   }
-  return cache;
 }
 
 export async function setState(next: AppState): Promise<void> {
-  cache = next;
   writeQueue = writeQueue.then(async () => {
     await fs.mkdir(DIR, { recursive: true });
     await fs.writeFile(FILE, JSON.stringify(next, null, 2));
