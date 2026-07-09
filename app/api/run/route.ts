@@ -1,0 +1,27 @@
+import { NextResponse } from "next/server";
+import { runPipeline } from "@/agent/pipeline";
+import { resetState, updateState } from "@/lib/store";
+import { FIXTURE_TARGETS, FIXTURE_WEBSITE } from "@/data/fixtures";
+
+export const dynamic = "force-dynamic";
+
+export async function POST(req: Request) {
+  const body = await req.json().catch(() => ({}));
+  const website: string = body.website?.trim() || FIXTURE_WEBSITE;
+  const targets: string[] =
+    Array.isArray(body.targets) && body.targets.length
+      ? body.targets
+      : FIXTURE_TARGETS;
+
+  await resetState();
+  await updateState((s) => {
+    s.input.website = website;
+    s.input.targets = targets;
+    s.run_started_at = new Date().toISOString();
+  });
+
+  // Fire and forget — the UI polls /api/state and watches the crew work.
+  void runPipeline(website, targets);
+
+  return NextResponse.json({ ok: true });
+}
