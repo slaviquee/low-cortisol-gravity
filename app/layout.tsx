@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, IBM_Plex_Mono, Instrument_Serif } from "next/font/google";
 import Link from "next/link";
+import SiteSwitcher from "@/components/site-switcher";
 import "./globals.css";
 
 const sans = Geist({
@@ -57,6 +58,7 @@ export default function RootLayout({
               </span>
             </Link>
             <nav className="flex items-center gap-6">
+              <SiteSwitcher />
               {NAV.map((n) => (
                 <Link key={n.href} href={n.href} className="group flex items-center gap-1.5 text-[13px]">
                   <span className="arr text-[var(--accent)]">→</span>

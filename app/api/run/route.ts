@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { runPipeline } from "@/agent/pipeline";
 import { resetState, updateState } from "@/lib/store";
+import { archiveActiveState } from "@/lib/sites";
 import { FIXTURE_TARGETS, FIXTURE_WEBSITE } from "@/data/fixtures";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +18,7 @@ export async function POST(req: Request) {
   const ownHandles: string = body.own_handles?.trim() || "";
   const runId = new Date().toISOString();
 
+  await archiveActiveState(); // keep the previous site's world switchable
   await resetState();
   await updateState((s) => {
     s.input.website = website;

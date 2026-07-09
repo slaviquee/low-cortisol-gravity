@@ -5,6 +5,7 @@
   "description": "Gravity — buyer-orbit GTM agent. Build enough relevance that your buyers discover you before you discover them.",
   "scripts": {
     "dev": "next dev",
+    "dev:alt": "NEXT_DIST_DIR=.next-alt next dev --port 3111",
     "build": "next build",
     "start": "next start",
     "test:mock": "node scripts/mock-fallback-selfcheck.mjs",

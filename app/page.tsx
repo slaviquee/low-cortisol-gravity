@@ -228,6 +228,7 @@ export default function Landing() {
   const [ownHandles, setOwnHandles] = useState("");
   const [summary, setSummary] = useState("");
   const [scouting, setScouting] = useState(false);
+  const [runError, setRunError] = useState("");
   const [phase, setPhase] = useState<"form" | "thinking">("form");
   const [showStep2, setShowStep2] = useState(false);
   const [log, setLog] = useState<LogLine[]>([]);
@@ -241,8 +242,10 @@ export default function Landing() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ website: website || FIXTURE_WEBSITE }),
       });
-      const data = await res.json();
-      setSummary(data.summary);
+      const data = res.ok ? await res.json() : null;
+      if (typeof data?.summary === "string") setSummary(data.summary);
+    } catch {
+      // scout is a nicety — stay quiet, the run itself re-reads the site
     } finally {
       setScouting(false);
     }
@@ -250,19 +253,27 @@ export default function Landing() {
 
   async function build() {
     setShowStep2(false);
+    setRunError("");
     setPhase("thinking");
-    await fetch("/api/run", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        website: website || FIXTURE_WEBSITE,
-        own_handles: ownHandles,
-        targets: targets
-          .split(/[\n,]/)
-          .map((t) => t.trim())
-          .filter(Boolean),
-      }),
-    });
+    try {
+      const res = await fetch("/api/run", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          website: website || FIXTURE_WEBSITE,
+          own_handles: ownHandles,
+          targets: targets
+            .split(/[\n,]/)
+            .map((t) => t.trim())
+            .filter(Boolean),
+        }),
+      });
+      if (!res.ok) throw new Error(`run failed (${res.status})`);
+    } catch {
+      // back to the form — never redirect to an empty board
+      setPhase("form");
+      setRunError("couldn't start the analysis — give it another try in a moment.");
+    }
   }
 
   useEffect(() => {
@@ -331,6 +342,15 @@ export default function Landing() {
           <span className="arr">→</span> build gravity
         </button>
       </div>
+
+      {runError && (
+        <p
+          className="rise mono mt-3 text-center text-[12px]"
+          style={{ color: "#b3532f" }}
+        >
+          {runError}
+        </p>
+      )}
 
       {(summary || scouting) && (
         <div className="rise card-paper mt-3 p-3.5">
