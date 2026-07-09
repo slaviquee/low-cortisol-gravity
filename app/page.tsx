@@ -212,6 +212,7 @@ export default function Landing() {
   const [summary, setSummary] = useState("");
   const [scouting, setScouting] = useState(false);
   const [phase, setPhase] = useState<"form" | "thinking">("form");
+  const [showStep2, setShowStep2] = useState(false);
   const [log, setLog] = useState<LogLine[]>([]);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
@@ -231,6 +232,7 @@ export default function Landing() {
   }
 
   async function build() {
+    setShowStep2(false);
     setPhase("thinking");
     await fetch("/api/run", {
       method: "POST",
@@ -306,9 +308,9 @@ export default function Landing() {
           value={website}
           onChange={(e) => setWebsite(e.target.value)}
           onBlur={() => website && scout()}
-          onKeyDown={(e) => e.key === "Enter" && build()}
+          onKeyDown={(e) => e.key === "Enter" && setShowStep2(true)}
         />
-        <button className="btn shrink-0 px-5" onClick={build}>
+        <button className="btn shrink-0 px-5" onClick={() => setShowStep2(true)}>
           <span className="arr">→</span> build gravity
         </button>
       </div>
@@ -324,42 +326,72 @@ export default function Landing() {
         </div>
       )}
 
-      <details className="group mt-3">
-        <summary className="label cursor-pointer list-none text-center transition-colors hover:text-[var(--ink)]">
-          + targets · hubspot pipe · your socials
-        </summary>
-        <div className="rise mt-3 space-y-3">
-          <textarea
-            className="input h-14 resize-none"
-            placeholder={`target accounts — ${FIXTURE_TARGETS.slice(0, 3).join(", ")}, …`}
-            value={targets}
-            onChange={(e) => setTargets(e.target.value)}
-          />
-          <input
-            className="input"
-            placeholder="your socials for tone of voice — linkedin.com/in/you · @you"
-            value={ownHandles}
-            onChange={(e) => setOwnHandles(e.target.value)}
-          />
-        </div>
-      </details>
-
-      <p className="mono mt-9 text-center text-[12px] leading-relaxed text-[var(--muted)]">
+      <p className="mono mt-9 text-center text-[12px] leading-relaxed text-[var(--ink)]">
         cold outreach is dying — every inbox is the same
         <br />
         ai-written &quot;personalization&quot;, and reply rates show it.
         <br />
-        <span className="text-[var(--ink)]">here&apos;s what gravity does instead:</span>
+        <span className="font-medium">here&apos;s what gravity does instead:</span>
       </p>
 
       <div className="mt-6">
         <DemoStage />
       </div>
-      <p className="label mt-3 text-center" style={{ fontSize: 11 }}>
-        no keys? runs on the cached demo world — nothing waits on a third party
-      </p>
 
       <Partners />
+
+      {showStep2 && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-6"
+          style={{ background: "rgba(27, 27, 25, 0.28)", backdropFilter: "blur(4px)" }}
+          onClick={() => setShowStep2(false)}
+        >
+          <div
+            className="rise w-full max-w-md rounded-xl p-5"
+            style={{ background: "var(--bg)", boxShadow: "0 24px 64px -24px rgba(27,27,25,.45)" }}
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.key === "Escape" && setShowStep2(false)}
+          >
+            <p className="label">step 2 of 2 · optional — skip freely</p>
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="label" style={{ fontSize: 11.5 }}>
+                  target accounts · hubspot pipe
+                </label>
+                <textarea
+                  className="input mt-1.5 h-16 resize-none"
+                  placeholder={`${FIXTURE_TARGETS.slice(0, 3).join(", ")}, …`}
+                  value={targets}
+                  autoFocus
+                  onChange={(e) => setTargets(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="label" style={{ fontSize: 11.5 }}>
+                  your socials · tone of voice
+                </label>
+                <input
+                  className="input mt-1.5"
+                  placeholder="linkedin.com/in/you · @you"
+                  value={ownHandles}
+                  onChange={(e) => setOwnHandles(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="mt-5 flex items-center justify-between gap-2">
+              <button
+                className="label cursor-pointer transition-colors hover:text-[var(--ink)]"
+                onClick={build}
+              >
+                skip →
+              </button>
+              <button className="btn" onClick={build}>
+                <span className="arr">→</span> build gravity
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
