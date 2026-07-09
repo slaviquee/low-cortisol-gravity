@@ -84,7 +84,9 @@ export async function enrichContact(person: {
       }),
       signal: AbortSignal.timeout(20_000),
     });
+    if (!start.ok) throw new Error(`${start.status} ${await start.text()}`);
     const { enrichment_id } = await start.json();
+    if (!enrichment_id) return { email: "", phone: "" };
     for (let i = 0; i < 12; i++) {
       await new Promise((r) => setTimeout(r, 5000));
       const poll = await fetch(`${BASE}/contact/enrich/bulk/${enrichment_id}`, {

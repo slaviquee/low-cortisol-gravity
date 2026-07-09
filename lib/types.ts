@@ -146,8 +146,10 @@ export interface WarmCard {
   phone?: string;
   email_draft: string;
   connect_note: string;
+  call_script?: string; // Step 8 — call after in-feed familiarity exists
   serendipity: boolean; // engager we never prospected — ICP-fit stranger
   sent: boolean;
+  called?: boolean;
   meeting: boolean; // booked — the success metric: prospect → meeting
   pitch_brief?: string; // tailored per-lead pitch outline (→ Gamma deck)
 }
@@ -164,6 +166,7 @@ export interface AppState {
     product_summary: string;
     targets: string[];
     own_handles?: string; // your socials — tone-of-voice source
+    own_post_urls?: string[]; // published posts Radar should scan
   };
   crew: CrewStatus[];
   prospects: BuyerWorldModel[];

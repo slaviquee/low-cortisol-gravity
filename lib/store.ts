@@ -36,10 +36,15 @@ export async function setState(next: AppState): Promise<void> {
 export async function updateState(
   fn: (s: AppState) => AppState | void
 ): Promise<AppState> {
-  const s = await getState();
-  const result = fn(s);
-  const next = (result ?? s) as AppState;
-  await setState(next);
+  let next: AppState = emptyState();
+  writeQueue = writeQueue.then(async () => {
+    const s = await getState();
+    const result = fn(s);
+    next = (result ?? s) as AppState;
+    await fs.mkdir(DIR, { recursive: true });
+    await fs.writeFile(FILE, JSON.stringify(next, null, 2));
+  });
+  await writeQueue;
   return next;
 }
 

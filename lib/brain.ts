@@ -78,9 +78,10 @@ export async function getBrain(): Promise<CompanyBrain> {
 export async function updateBrain(
   fn: (b: CompanyBrain) => CompanyBrain | void
 ): Promise<CompanyBrain> {
-  const b = await getBrain();
-  const next = (fn(b) ?? b) as CompanyBrain;
+  let next: CompanyBrain = emptyBrain();
   writeQueue = writeQueue.then(async () => {
+    const b = await getBrain();
+    next = (fn(b) ?? b) as CompanyBrain;
     await fs.mkdir(DIR, { recursive: true });
     await fs.writeFile(FILE, JSON.stringify(next, null, 2));
   });

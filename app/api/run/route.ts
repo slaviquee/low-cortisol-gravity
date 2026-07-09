@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { runPipeline } from "@/agent/pipeline";
-import { DEMO_RADAR_COOKIE } from "@/lib/demo-state";
 import { resetState, updateState } from "@/lib/store";
 import { FIXTURE_TARGETS, FIXTURE_WEBSITE } from "@/data/fixtures";
 
@@ -9,12 +8,6 @@ export const maxDuration = 300; // managed agents spawn a Claude Code subprocess
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
-  if (process.env.VERCEL) {
-    const res = NextResponse.json({ ok: true });
-    res.cookies.set(DEMO_RADAR_COOKIE, "0", { path: "/", sameSite: "lax" });
-    return res;
-  }
-
   const website: string = body.website?.trim() || FIXTURE_WEBSITE;
   const targets: string[] =
     Array.isArray(body.targets) && body.targets.length
@@ -22,17 +15,22 @@ export async function POST(req: Request) {
       : FIXTURE_TARGETS;
 
   const ownHandles: string = body.own_handles?.trim() || "";
+  const runId = new Date().toISOString();
 
   await resetState();
   await updateState((s) => {
     s.input.website = website;
     s.input.targets = targets;
     s.input.own_handles = ownHandles;
-    s.run_started_at = new Date().toISOString();
+    s.run_started_at = runId;
   });
 
-  // Fire and forget — the UI polls /api/state and watches the crew work.
-  void runPipeline(website, targets, ownHandles);
+  if (process.env.VERCEL) {
+    await runPipeline(website, targets, ownHandles, runId);
+  } else {
+    // Fire and forget locally — the UI polls /api/state and watches the crew work.
+    void runPipeline(website, targets, ownHandles, runId);
+  }
 
   return NextResponse.json({ ok: true });
 }

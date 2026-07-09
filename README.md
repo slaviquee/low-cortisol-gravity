@@ -71,9 +71,11 @@ subscription via `claude setup-token` → put the token in
 — the app just falls back to fixtures in the meantime.
 
 Demo flow: paste a website → **build gravity** → watch the crew on
-`/board` → review `/plan` → hit **scan engagement** on `/warm` to close the
-loop (warm trigger → enrichment → drafted touch, including a serendipitous
-engager who was never on the target list).
+`/board` → review `/plan` → paste your published post URLs on `/warm` and hit
+**scan engagement** to close the loop. With `GRAVITY_MOCK=1`, Radar uses the
+deterministic engagement script instead. The warm trigger now runs
+FullEnrich just-in-time for email + phone, drafts the email/connection note,
+and gives the AE a call script for the post-engaged buyer.
 
 ## Stack
 
@@ -129,9 +131,9 @@ both Vercel and Railway production environments as needed:
 - `GRADIUM_API_KEY`
 
 Railway is the full long-running host: file state, background pipeline work,
-and the Agent SDK subprocess run normally. Vercel runs the public demo safely
-on serverless: state/brain writes use temporary storage, and `/api/run`,
-`/api/state`, and `/api/radar` serve the deterministic fixture flow. Use a
+and the Agent SDK subprocess run normally. Vercel can run the same API path,
+but state/brain writes use temporary storage on serverless; set
+`GRAVITY_MOCK=1` when you want the deterministic public-demo flow. Use a
 durable store such as Redis/KV before relying on Vercel state across cold
 starts.
 

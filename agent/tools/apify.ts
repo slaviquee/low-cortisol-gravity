@@ -49,7 +49,7 @@ export async function latestActivityDates(profileUrl: string) {
     profiles: [profileUrl],
     maxItems: 5,
   });
-  return items?.map((i) => i.postedAt).filter(Boolean) ?? null;
+  return items?.flatMap((i) => (i.postedAt ? [i.postedAt] : [])) ?? null;
 }
 
 // X timeline via Apify (cheap path). Verified input schema: twitterHandles

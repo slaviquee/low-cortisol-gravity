@@ -9,6 +9,7 @@ export default function Warm() {
   const state = usePolledState(1000);
   const [scanning, setScanning] = useState(false);
   const [lastScan, setLastScan] = useState("");
+  const [postUrls, setPostUrls] = useState("");
 
   if (!state) return <p className="label">connecting…</p>;
   const warmth = warmthScore(state.prospects);
@@ -16,7 +17,15 @@ export default function Warm() {
   async function scan() {
     setScanning(true);
     try {
-      const res = await fetch("/api/radar", { method: "POST" });
+      const urls = postUrls
+        .split(/[\n,]/)
+        .map((u) => u.trim())
+        .filter(Boolean);
+      const res = await fetch("/api/radar", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ post_urls: urls }),
+      });
       const data = await res.json();
       setLastScan(data.result);
     } finally {
@@ -62,6 +71,18 @@ export default function Warm() {
             </button>
           </div>
         </div>
+      </div>
+
+      <div className="card p-4">
+        <label className="label" style={{ fontSize: 11.5 }}>
+          published post urls · optional in mock
+        </label>
+        <textarea
+          className="input mt-2 h-16 resize-none"
+          placeholder="https://www.linkedin.com/posts/... or x.com/... — one per line"
+          value={postUrls}
+          onChange={(e) => setPostUrls(e.target.value)}
+        />
       </div>
 
       {lastScan && (
@@ -131,9 +152,30 @@ export default function Warm() {
                     </pre>
                   </div>
                 )}
+                {w.phone && (
+                  <div className="card-paper mt-3 p-3.5">
+                    <p className="link-green mb-1.5 text-[11.5px]">
+                      → step 8 · phone ready · already saw you in feed
+                    </p>
+                    {w.call_script && (
+                      <pre className="whitespace-pre-wrap font-[family-name:var(--font-mono)] text-[12px] leading-relaxed text-[#33332f]">
+                        {w.call_script}
+                      </pre>
+                    )}
+                  </div>
+                )}
                 <div className="mt-3.5 flex flex-wrap gap-2">
                   <CopyBtn text={w.email_draft} label="copy email" />
                   {w.connect_note && <CopyBtn text={w.connect_note} label="copy note" />}
+                  {w.phone && (
+                    <>
+                      <CopyBtn text={w.phone} label="copy phone" />
+                      <a className="btn btn-ghost" href={`tel:${w.phone.replace(/[^\d+]/g, "")}`}>
+                        call now →
+                      </a>
+                    </>
+                  )}
+                  {w.call_script && <CopyBtn text={w.call_script} label="copy call script" />}
                   {!w.pitch_brief ? (
                     <button className="btn btn-ghost" onClick={() => pitch(w.id)}>
                       → pitch brief
@@ -156,10 +198,21 @@ export default function Warm() {
                       mark sent →
                     </button>
                   )}
-                  {w.sent && !w.meeting && (
+                  {w.phone && !w.called && (
+                    <button className="btn" onClick={() => patch(w.id, { called: true })}>
+                      called ✓
+                    </button>
+                  )}
+                  {(w.sent || w.called) && !w.meeting && (
                     <button className="btn" onClick={() => patch(w.id, { meeting: true })}>
                       meeting booked ✓
                     </button>
+                  )}
+                  {w.called && !w.meeting && (
+                    <span className="flex items-center gap-1.5 text-[12px] font-medium text-[var(--accent)]">
+                      <span className="dot" style={{ background: "var(--accent)" }} />
+                      called
+                    </span>
                   )}
                   {w.meeting && (
                     <span className="flex items-center gap-1.5 text-[12px] font-medium text-[var(--accent)]">

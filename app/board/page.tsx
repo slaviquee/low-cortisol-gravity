@@ -97,7 +97,11 @@ export default function Pipeline() {
   async function scan() {
     setScanning(true);
     try {
-      await fetch("/api/radar", { method: "POST" });
+      await fetch("/api/radar", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ post_urls: state?.input.own_post_urls ?? [] }),
+      });
     } finally {
       setScanning(false);
     }
@@ -351,11 +355,21 @@ export default function Pipeline() {
               ) : (
                 <p className="mono mt-1 truncate text-[10.5px] text-[var(--muted)]">
                   ✉ {w.email}
+                  {w.phone && <> · ☎ {w.phone}</>}
                 </p>
               )}
               {!w.enriching && (
                 <div className="mt-2 flex gap-1.5">
                   <CopyBtn small text={w.email_draft} label="copy email" />
+                  {w.phone && (
+                    <a
+                      className="btn btn-ghost"
+                      style={{ padding: "4px 10px", fontSize: 11.5 }}
+                      href={`tel:${w.phone.replace(/[^\d+]/g, "")}`}
+                    >
+                      call
+                    </a>
+                  )}
                   {!w.sent && (
                     <button
                       className="btn"

@@ -20,18 +20,379 @@ import { evalDraft, mechanicalRevise, SHIP_THRESHOLD } from "./evals";
 import {
   AppState,
   BuyerWorldModel,
+  Cohort,
   CrewAgent,
+  EngagementEvent,
+  GravityMap,
+  PlanItem,
+  Signal,
   WARM_TRIGGER,
   WarmCard,
 } from "@/lib/types";
 import { think } from "./brain";
-import { hasClaude } from "./claude";
+import { generateJSON, hasClaude, MODEL_DEEP, MODEL_FAST } from "./claude";
 import { managedAvailable } from "./managed";
-import { enrichContact } from "./tools/fullenrich";
+import { GRAVITY_MAP_SYSTEM, PLAN_SYSTEM, WORLD_MODEL_SYSTEM } from "./prompts";
+import { latestActivityDates, postEngagement, runActor } from "./tools/apify";
+import { enrichContact, searchPeople, type FoundPerson } from "./tools/fullenrich";
+import { findMediaAppearances, transcribe } from "./tools/gradium";
 import { fetchPipe } from "./tools/hubspot";
+import {
+  getCompanyMapping,
+  pushPersonaAndAccounts,
+  signalsForTargets,
+} from "./tools/sillage";
 import { distillWebsite } from "./tools/website";
+import { xFollowing, xSearch, xTimeline } from "./tools/x";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const forcedMock = () => process.env.GRAVITY_MOCK === "1";
+
+const TITLES = [
+  "VP Sales",
+  "CRO",
+  "Chief Revenue Officer",
+  "Head of Sales",
+  "Head of RevOps",
+  "Revenue Operations",
+];
+
+function slug(s: string) {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+function companyFromTarget(target: string) {
+  const clean = target.replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0];
+  return clean.includes(".")
+    ? clean.split(".")[0].replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+    : target;
+}
+
+function signalsForPerson(
+  map: Record<string, Signal[]> | null,
+  person: FoundPerson,
+  account: string
+): Signal[] {
+  if (!map) return [];
+  return [
+    ...(map[account] ?? []),
+    ...(map[person.company] ?? []),
+    ...(map[person.company.toLowerCase()] ?? []),
+  ];
+}
+
+function heatFromDates(dates: string[] | null) {
+  if (!dates?.length) return 18;
+  const newest = dates
+    .map((d) => Date.parse(d))
+    .filter(Number.isFinite)
+    .sort((a, b) => b - a)[0];
+  if (!newest) return 35;
+  const days = (Date.now() - newest) / 86_400_000;
+  if (days < 7) return 82;
+  if (days < 30) return 62;
+  if (days < 90) return 38;
+  return 18;
+}
+
+function emptyModel(
+  person: FoundPerson,
+  account: string,
+  signals: Signal[],
+  heat = 35
+): BuyerWorldModel {
+  return {
+    id: slug(`${person.name}-${person.company || account}`),
+    prospect: {
+      name: person.name,
+      title: person.title || "Revenue leader",
+      company: person.company || companyFromTarget(account),
+      linkedin_url: person.linkedin_url || "",
+      x_handle: "",
+    },
+    contact: { emails: [], phones: [] },
+    signals,
+    topics: [],
+    formats: [],
+    media: [],
+    influencers: [],
+    behavior: heat < 25 ? "lurker" : "commenter",
+    gravity_score: 0,
+    heat,
+    state: heat < 25 ? "low_orbit" : "cold",
+    engagement_events: [],
+  };
+}
+
+async function resolveProspects(
+  targets: string[],
+  signalMap: Record<string, Signal[]> | null,
+  mock: boolean
+): Promise<BuyerWorldModel[]> {
+  if (mock) return fixtureProspects();
+  const people: Array<FoundPerson & { account: string }> = [];
+  for (const account of targets.slice(0, 10)) {
+    const [mapped, searched] = await Promise.all([
+      getCompanyMapping(account),
+      account.includes(".") ? searchPeople(account, TITLES) : Promise.resolve(null),
+    ]);
+    for (const person of [...(mapped ?? []), ...(searched ?? [])]) {
+      if (person.name) people.push({ ...person, account });
+    }
+  }
+  const seen = new Set<string>();
+  const unique = people
+    .filter((p) => {
+      const key = slug(`${p.name}-${p.company}`);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 8);
+  if (!unique.length) return fixtureProspects();
+
+  const models: BuyerWorldModel[] = [];
+  for (const person of unique) {
+    const dates = person.linkedin_url ? await latestActivityDates(person.linkedin_url) : null;
+    models.push(
+      emptyModel(
+        person,
+        person.account,
+        signalsForPerson(signalMap, person, person.account),
+        heatFromDates(dates)
+      )
+    );
+  }
+  return models;
+}
+
+const worldSchema = {
+  type: "object",
+  properties: {
+    topics: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          topic: { type: "string" },
+          stance: { type: "string" },
+          evidence: { type: "array", items: { type: "string" } },
+        },
+        required: ["topic", "stance", "evidence"],
+      },
+    },
+    formats: { type: "array", items: { type: "string" } },
+    media: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          kind: { type: "string", enum: ["text", "image", "carousel", "video", "poll"] },
+          share: { type: "number" },
+        },
+        required: ["kind", "share"],
+      },
+    },
+    influencers: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          why: { type: "string" },
+          evidence: { type: "array", items: { type: "string" } },
+        },
+        required: ["name", "why", "evidence"],
+      },
+    },
+    behavior: { type: "string", enum: ["poster", "commenter", "lurker"] },
+  },
+  required: ["topics", "formats", "media", "influencers", "behavior"],
+};
+
+async function buildWorldModel(model: BuyerWorldModel, mock: boolean) {
+  if (mock || model.state === "low_orbit") return model;
+  const linkedin = model.prospect.linkedin_url;
+  const handle = model.prospect.x_handle;
+  const [posts, comments, reactions, timeline, following, xTaste, appearances] =
+    await Promise.all([
+      linkedin ? runActor("posts", { profiles: [linkedin], maxItems: 8 }) : null,
+      linkedin ? runActor("profileComments", { profiles: [linkedin], maxItems: 8 }) : null,
+      linkedin ? runActor("profileReactions", { profiles: [linkedin], maxItems: 8 }) : null,
+      handle ? xTimeline(handle) : null,
+      handle ? xFollowing(handle) : null,
+      handle
+        ? xSearch(`What does ${model.prospect.name} argue about professionally?`, [handle])
+        : null,
+      findMediaAppearances(model.prospect.name, model.prospect.company),
+    ]);
+  const transcript = appearances?.[0]?.url ? await transcribe(appearances[0].url) : null;
+  const generated = await generateJSON<{
+    topics: BuyerWorldModel["topics"];
+    formats: string[];
+    media: BuyerWorldModel["media"];
+    influencers: BuyerWorldModel["influencers"];
+    behavior: BuyerWorldModel["behavior"];
+  }>({
+    model: MODEL_FAST,
+    system: WORLD_MODEL_SYSTEM,
+    schema: worldSchema,
+    prompt: `Prospect: ${JSON.stringify(model.prospect)}
+Signals: ${JSON.stringify(model.signals)}
+LinkedIn posts: ${JSON.stringify(posts ?? [])}
+LinkedIn comments: ${JSON.stringify(comments ?? [])}
+LinkedIn reactions: ${JSON.stringify(reactions ?? [])}
+X timeline: ${JSON.stringify(timeline ?? [])}
+X following: ${JSON.stringify(following ?? [])}
+X semantic read: ${xTaste ?? ""}
+Spoken web transcript: ${transcript ?? ""}
+
+Return only evidence-backed buyer taste signals. If evidence is weak, say so with sparse topics rather than inventing.`,
+    maxTokens: 2500,
+  });
+  if (!generated) return { ...model, state: "modeled" as const };
+  return {
+    ...model,
+    topics: generated.topics ?? [],
+    formats: generated.formats ?? [],
+    media: generated.media ?? [],
+    influencers: generated.influencers ?? [],
+    behavior: generated.behavior ?? model.behavior,
+    state: "modeled" as const,
+  };
+}
+
+const gravitySchema = {
+  type: "object",
+  properties: {
+    summary: { type: "string" },
+    themes: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          theme: { type: "string" },
+          who: { type: "array", items: { type: "string" } },
+          evidence: { type: "array", items: { type: "string" } },
+        },
+        required: ["theme", "who", "evidence"],
+      },
+    },
+    watering_holes: { type: "array", items: { type: "string" } },
+  },
+  required: ["summary", "themes", "watering_holes"],
+};
+
+function deriveCohorts(prospects: BuyerWorldModel[]): Cohort[] {
+  const groups = new Map<string, Cohort>();
+  for (const p of prospects) {
+    const key =
+      p.state === "low_orbit"
+        ? "quiet-execs"
+        : slug(p.formats[0] || p.behavior || "active-buyers");
+    const existing = groups.get(key);
+    if (existing) {
+      existing.members.push(p.id);
+      continue;
+    }
+    groups.set(key, {
+      id: key,
+      name: key.replaceAll("-", " "),
+      taste:
+        p.state === "low_orbit"
+          ? "quiet on socials — email/call after timed signal"
+          : p.formats[0]?.replaceAll("_", " ") || "active buyer signals",
+      format: p.formats[0] || "direct_touch",
+      members: [p.id],
+      engagements: 0,
+      warm: 0,
+    });
+  }
+  return [...groups.values()];
+}
+
+const planSchema = {
+  type: "object",
+  properties: {
+    items: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          day: { type: "string", enum: ["Mon", "Tue", "Wed", "Thu", "Fri"] },
+          type: {
+            type: "string",
+            enum: ["post", "blog", "comment", "follow", "react", "connect"],
+          },
+          channel: { type: "string", enum: ["linkedin", "x"] },
+          title: { type: "string" },
+          draft: { type: "string" },
+          why: { type: "string" },
+          evidence: { type: "array", items: { type: "string" } },
+          link: { type: "string" },
+          cohort: { type: "string" },
+          media: { type: "string" },
+        },
+        required: ["day", "type", "channel", "title", "draft", "why", "evidence"],
+      },
+    },
+  },
+  required: ["items"],
+};
+
+function fallbackPlan(prospects: BuyerWorldModel[], cohorts: Cohort[]): PlanItem[] {
+  const hot = prospects.find((p) => p.state !== "low_orbit") ?? prospects[0];
+  const cohort = cohorts.find((c) => c.members.includes(hot?.id ?? ""))?.id;
+  const evidence = hot?.topics[0]?.evidence ?? hot?.signals.map((s) => s.detail) ?? [];
+  return [
+    {
+      id: "live-tue-post",
+      day: "Tue",
+      type: "post",
+      channel: "linkedin",
+      title: `Publish for ${cohort?.replaceAll("-", " ") ?? "active buyers"}`,
+      draft: `The best outbound teams are not sending more.\n\nThey are making sure every touch is worth sending before it leaves the queue.\n\nThat is the gap I keep seeing in sales teams adopting AI: generation is automated, QA is still manual.\n\nWhat are you checking before a message ships?`,
+      why: hot
+        ? `${hot.prospect.name} and nearby buyers show interest in ${hot.topics[0]?.topic ?? "outbound quality"}.`
+        : "Start with the strongest shared signal available.",
+      evidence,
+      cohort,
+      media: hot?.media[0]?.kind ?? "text",
+      done: false,
+    },
+    {
+      id: "live-wed-comment",
+      day: "Wed",
+      type: "comment",
+      channel: "linkedin",
+      title: "Comment inside the buyer orbit",
+      draft:
+        "The missing layer is QA. Most teams automated the writing, then kept the review process exactly as manual as before.",
+      why: "Enter the thread before the first direct touch.",
+      evidence,
+      link: hot?.influencers[0]?.evidence[0],
+      cohort,
+      media: hot?.media[0]?.kind,
+      done: false,
+    },
+    {
+      id: "live-thu-connect",
+      day: "Thu",
+      type: "connect",
+      channel: "linkedin",
+      title: hot ? `Connect with ${hot.prospect.name}` : "Connect with the hottest buyer",
+      draft: hot
+        ? `${hot.prospect.name.split(" ")[0]} — your recent activity around ${hot.topics[0]?.topic ?? "sales execution"} matched work we are doing on outbound QA. No pitch; thought the data would be useful.`
+        : "Saw your recent work around outbound quality. Thought the data we are seeing would be useful.",
+      why: "Third rung after visible feed touches.",
+      evidence,
+      link: hot?.prospect.linkedin_url,
+      cohort,
+      media: "text",
+      done: false,
+    },
+  ];
+}
 
 async function crew(agent: CrewAgent, status: "running" | "done", note: string) {
   await updateState((s) => {
@@ -44,17 +405,49 @@ async function crew(agent: CrewAgent, status: "running" | "done", note: string) 
   });
 }
 
+async function crewForRun(
+  runId: string | undefined,
+  agent: CrewAgent,
+  status: "running" | "done",
+  note: string
+) {
+  if (!runId) return crew(agent, status, note);
+  await updateState((s) => {
+    if (s.run_started_at !== runId) return;
+    const c = s.crew.find((c) => c.agent === agent);
+    if (c) {
+      c.status = status;
+      c.note = note;
+    }
+    s.log.push({ at: new Date().toISOString(), agent, msg: note });
+  });
+}
+
+async function updateRunState(
+  runId: string | undefined,
+  fn: (s: AppState) => AppState | void
+) {
+  if (!runId) return updateState(fn);
+  return updateState((s) => {
+    if (s.run_started_at !== runId) return;
+    return fn(s);
+  });
+}
+
 export async function runPipeline(
   website: string,
   targets: string[],
-  ownHandles?: string
+  ownHandles?: string,
+  runId?: string
 ) {
-  const mock = !hasClaude() && !managedAvailable();
+  const mock = forcedMock() || (!hasClaude() && !managedAvailable());
+  const mark = (agent: CrewAgent, status: "running" | "done", note: string) =>
+    crewForRun(runId, agent, status, note);
 
   // ── Scout: website → narrative; ICP + accounts into Sillage; signals back
-  await crew("scout", "running", `reading ${website}…`);
+  await mark("scout", "running", `reading ${website}…`);
   const summary = website ? await distillWebsite(website) : FIXTURE_SUMMARY;
-  await updateState((s) => {
+  await updateRunState(runId, (s) => {
     s.input.product_summary = summary;
     s.mock = mock;
   });
@@ -62,12 +455,12 @@ export async function runPipeline(
   await updateBrain((b) => {
     b.company.website = website;
     b.company.narrative = summary;
-    b.company.icp = FIXTURE_ICP; // real mode: distilled alongside the narrative
+    b.company.icp = FIXTURE_ICP;
     b.company.updated_at = new Date().toISOString();
     learn(b, "scout", `product narrative locked: ${summary.slice(0, 90)}…`);
   });
   // Tone of voice — read OUR OWN posts so everything ships in our voice.
-  await crew(
+  await mark(
     "scout",
     "running",
     `reading ${ownHandles || "your"} posts — locking tone of voice…`
@@ -77,7 +470,7 @@ export async function runPipeline(
     b.company.tone_of_voice = VOICE_PROFILE; // real mode: apify own posts → think('scout')
     learn(b, "scout", `tone of voice: ${VOICE_PROFILE[0]}; ${VOICE_PROFILE[1]}`);
   });
-  await crew("scout", "running", "tone locked: numbers-first · short · no emoji");
+  await mark("scout", "running", "tone locked: numbers-first · short · no emoji");
   // CRM in: HubSpot pipe — open deals to accelerate, closed-lost to re-warm.
   // Pipe accounts are MERGED into targeting, not just displayed.
   const pipe = await fetchPipe();
@@ -85,31 +478,41 @@ export async function runPipeline(
     targets = Array.from(
       new Set([...targets, ...pipe.closed_lost, ...pipe.open])
     ).slice(0, 20); // Sillage's recommended top-accounts batch size
-    await updateState((s) => {
+    await updateRunState(runId, (s) => {
       s.input.targets = targets;
     });
-    await crew(
+    await mark(
       "scout",
       "running",
       `hubspot pipe in: ${pipe.open.length} open · ${pipe.closed_lost.length} closed-lost to re-warm · ${pipe.won.length} won → lookalikes`
     );
   } else if (mock) {
     await sleep(600);
-    await crew("scout", "running", "hubspot pipe in: 4 open · 3 closed-lost to re-warm · 6 won → lookalikes");
+    await mark("scout", "running", "hubspot pipe in: 4 open · 3 closed-lost to re-warm · 6 won → lookalikes");
   }
-  await crew("scout", "running", "pushing persona + accounts into Sillage (MCP)…");
+  await mark("scout", "running", "pushing persona + accounts into Sillage…");
+  const sillageReady = mock
+    ? false
+    : await pushPersonaAndAccounts(FIXTURE_ICP, targets);
+  const signalMap = mock ? null : await signalsForTargets(targets);
   await sleep(mock ? 1400 : 300);
-  await crew("scout", "done", `ICP set · ${targets.length} accounts in · signal run launched`);
+  await mark(
+    "scout",
+    "done",
+    sillageReady || signalMap
+      ? `ICP set · ${targets.length} accounts in · Sillage signals read`
+      : `ICP set · ${targets.length} accounts in · Sillage fallback`
+  );
 
   // ── Resolver: named people (Sillage mappings + FullEnrich search), heat triage
-  await crew("resolver", "running", "reading company mappings → named buyers…");
+  await mark("resolver", "running", "reading company mappings → named buyers…");
   await sleep(mock ? 2000 : 500);
-  const prospects = fixtureProspects(); // real mode: merge mappings + searchPeople()
-  await crew("resolver", "running", "heat triage: who actually lives in the feed?");
+  const prospects = await resolveProspects(targets, signalMap, mock);
+  await mark("resolver", "running", "heat triage: who actually lives in the feed?");
   await sleep(mock ? 1500 : 300);
   const hot = prospects.filter((p) => p.state !== "low_orbit");
   const quiet = prospects.filter((p) => p.state === "low_orbit");
-  await updateState((s) => {
+  await updateRunState(runId, (s) => {
     s.prospects = prospects.map((p) => ({
       ...p,
       state: p.state === "low_orbit" ? "low_orbit" : "cold",
@@ -118,7 +521,7 @@ export async function runPipeline(
       influencers: [],
     }));
   });
-  await crew(
+  await mark(
     "resolver",
     "done",
     `${hot.length} hot · ${quiet.length} low-orbit — contact data waits for intent`
@@ -132,7 +535,7 @@ export async function runPipeline(
       company: p.prospect.company,
       linkedin_url: p.prospect.linkedin_url,
     }).then((c) =>
-      updateState((s) => {
+      updateRunState(runId, (s) => {
         const target = s.prospects.find((x) => x.id === p.id);
         if (target && c.email) target.contact.emails = [c.email];
       })
@@ -140,11 +543,13 @@ export async function runPipeline(
   }
 
   // ── Listener: one subagent per hot prospect, in parallel (world models)
-  await crew("listener", "running", `deep-scraping ${hot.length} hot prospects (LinkedIn + X)…`);
+  await mark("listener", "running", `deep-scraping ${hot.length} hot prospects (LinkedIn + X)…`);
   for (const p of hot) {
     await sleep(mock ? 2200 : 800);
-    const full = prospects.find((x) => x.id === p.id)!;
-    await updateState((s) => {
+    const full = await buildWorldModel(prospects.find((x) => x.id === p.id)!, mock);
+    const idx = prospects.findIndex((x) => x.id === p.id);
+    if (idx >= 0) prospects[idx] = full;
+    await updateRunState(runId, (s) => {
       const target = s.prospects.find((x) => x.id === p.id);
       if (target) {
         target.topics = full.topics;
@@ -154,37 +559,48 @@ export async function runPipeline(
         target.state = "modeled";
       }
     });
-    await crew("listener", "running", `world model built: ${p.prospect.name}`);
+    await mark("listener", "running", `world model built: ${p.prospect.name}`);
     // The spoken web: web search finds appearances, Gradium STT transcribes.
     // Real mode: findMediaAppearances() + transcribe(); mock shows Jane's.
     if (p.id === "jane-kowalski") {
-      await crew(
+      await mark(
         "listener",
         "running",
         "podcast found: Outbound Radio ep.42 → gradium transcript mined for stances"
       );
     }
   }
-  await crew(
+  await mark(
     "listener",
     "running",
     "media mix analyzed: carousels lead for 2 of 3 buyers, text for one"
   );
   await sleep(mock ? 900 : 200);
-  await crew("listener", "done", `${hot.length} Buyer World Models, every claim with evidence`);
+  await mark("listener", "done", `${hot.length} Buyer World Models, every claim with evidence`);
 
   // ── Strategist: Gravity Map → taste cohorts → the week's plan
-  await crew("strategist", "running", "synthesizing the Gravity Map across the ICP…");
+  await mark("strategist", "running", "synthesizing the Gravity Map across the ICP…");
   await sleep(mock ? 2500 : 500);
-  await updateState((s) => {
-    s.gravity_map = FIXTURE_GRAVITY_MAP; // real mode: generateJSON(GRAVITY_MAP_SYSTEM,…) on MODEL_DEEP
+  const gravity =
+    mock
+      ? FIXTURE_GRAVITY_MAP
+      : (await generateJSON<GravityMap>({
+          model: MODEL_DEEP,
+          system: GRAVITY_MAP_SYSTEM,
+          schema: gravitySchema,
+          prompt: `Product: ${summary}\n\nBuyer World Models:\n${JSON.stringify(prospects)}`,
+          maxTokens: 2500,
+        })) ?? FIXTURE_GRAVITY_MAP;
+  await updateRunState(runId, (s) => {
+    s.gravity_map = gravity;
   });
   // Cluster world models into taste cohorts: one post serves a cohort,
   // not a person — and performance gets scored per cohort.
-  await crew("strategist", "running", "clustering 3 world models → 2 taste cohorts (+1 quiet)…");
+  await mark("strategist", "running", "clustering 3 world models → 2 taste cohorts (+1 quiet)…");
   await sleep(mock ? 1600 : 300);
-  await updateState((s) => {
-    s.cohorts = fixtureCohorts();
+  const cohorts = mock ? fixtureCohorts() : deriveCohorts(prospects);
+  await updateRunState(runId, (s) => {
+    s.cohorts = cohorts;
   });
   await updateBrain((b) =>
     decide(
@@ -193,20 +609,45 @@ export async function runPipeline(
       "chart skeptics (2 buyers) and systems thinkers (1) reward different formats — one post per cohort beats one post per person"
     )
   );
-  await crew("strategist", "running", "drafting the gravity plan: posts · comments · micro-actions…");
+  await mark("strategist", "running", "drafting the gravity plan: posts · comments · micro-actions…");
   await sleep(mock ? 2500 : 500);
-  const gated = await evalGate(fixturePlan(), "strategist");
-  await updateState((s) => {
+  const generatedPlan =
+    mock
+      ? null
+      : await generateJSON<{ items: Omit<PlanItem, "id" | "done">[] }>({
+          model: MODEL_DEEP,
+          system: PLAN_SYSTEM,
+          schema: planSchema,
+          prompt: `Product: ${summary}
+Gravity map: ${JSON.stringify(gravity)}
+Cohorts: ${JSON.stringify(cohorts)}
+Buyer World Models: ${JSON.stringify(prospects)}
+Brain: ${brainDigest(await getBrain())}
+
+Create a 5-day plan with posts, comments, reacts/follows/connects. Each item targets one cohort and cites evidence.`,
+          maxTokens: 3500,
+        });
+  const plan = generatedPlan?.items?.length
+    ? generatedPlan.items.map((item, i) => ({
+        id: `live-${i + 1}-${slug(item.title)}`,
+        done: false,
+        ...item,
+      }))
+    : mock
+      ? fixturePlan()
+      : fallbackPlan(prospects, cohorts);
+  const gated = await evalGate(plan, "strategist", runId);
+  await updateRunState(runId, (s) => {
     s.plan = gated;
   });
   await updateBrain((b) =>
     decide(b, "week-1 plan: tactical charts + influencer comments", "6/10 targets reward that format (world-model evidence)")
   );
-  await crew("strategist", "done", "5-day plan ready — evals passed, familiarity ladder sequenced");
+  await mark("strategist", "done", "5-day plan ready — evals passed, familiarity ladder sequenced");
 
   // ── Radar: armed, watching
-  await crew("radar", "running", "watching your posts for target engagement…");
-  await updateState((s) => {
+  await mark("radar", "running", "watching your posts for target engagement…");
+  await updateRunState(runId, (s) => {
     s.run_done = true;
   });
 }
@@ -216,7 +657,8 @@ export async function runPipeline(
 // revision and a re-score. Nothing ships under threshold silently.
 async function evalGate(
   items: import("@/lib/types").PlanItem[],
-  agent: CrewAgent
+  agent: CrewAgent,
+  runId?: string
 ): Promise<import("@/lib/types").PlanItem[]> {
   const brain = await getBrain();
   const out = [];
@@ -229,7 +671,7 @@ async function evalGate(
       item.draft = mechanicalRevise(item.draft);
       verdict = evalDraft(item, brain);
       revised = true;
-      await updateState((s) => {
+      await updateRunState(runId, (s) => {
         s.log.push({
           at: new Date().toISOString(),
           agent,
@@ -245,9 +687,17 @@ async function evalGate(
 let scriptCursor = 0;
 
 // One Radar scan = one pass over engagement on OUR posts.
-// Mock: advances the scripted beats. Real: apify postEngagement() on
+// Mock/no URLs: advances the scripted beats. Real: apify postEngagement() on
 // published post URLs, matched against the target list the same way.
-export async function radarScan(): Promise<string> {
+export async function radarScan(postUrls: string[] = []): Promise<string> {
+  const urls = postUrls.map((u) => u.trim()).filter(Boolean);
+  if (!forcedMock() && urls.length && process.env.APIFY_TOKEN) {
+    return liveRadarScan(urls);
+  }
+  const current = await getState();
+  if (!forcedMock() && !current.mock && !urls.length) {
+    return "Paste at least one published LinkedIn/X post URL so Radar can scan live engagement.";
+  }
   const beat = ENGAGEMENT_SCRIPT[scriptCursor];
   if (!beat) return "No new engagement since last scan.";
   scriptCursor++;
@@ -358,6 +808,7 @@ export async function radarScan(): Promise<string> {
     serendipity: true,
     meeting: false,
     sent: false,
+    called: false,
   };
   await updateState((s) => {
     s.warm.unshift(card);
@@ -365,6 +816,7 @@ export async function radarScan(): Promise<string> {
   });
   const contact = await enrichContact({ id, name: st.name, company: st.company, linkedin_url: st.linkedin_url });
   const drafts = await draftOutreach(st.name, st.title, event.quote ?? "", null);
+  const call = await draftCallScript(st.name, st.title, event.quote ?? "", contact.phone);
   await updateState((s) => {
     const c = s.warm.find((w) => w.id === card.id);
     if (c) {
@@ -373,10 +825,150 @@ export async function radarScan(): Promise<string> {
       c.phone = contact.phone;
       c.email_draft = drafts.email;
       c.connect_note = drafts.note;
+      c.call_script = call;
     }
   });
   void draftPitchBrief(card.id); // brief is ready before any call or email
   return `Serendipity: ${st.name} (${st.company}) engaged, fits ICP → added to warm queue`;
+}
+
+async function liveRadarScan(postUrls: string[]): Promise<string> {
+  await updateState((s) => {
+    s.input.own_post_urls = Array.from(
+      new Set([...(s.input.own_post_urls ?? []), ...postUrls])
+    );
+  });
+  let seen = 0;
+  let warm = 0;
+  for (const url of postUrls) {
+    const engagement = await postEngagement(url);
+    const events = [
+      ...engagement.comments.map((c) => ({
+        name: c.name ?? "",
+        headline: c.headline ?? "",
+        profileUrl: c.profileUrl ?? "",
+        kind: "comment" as const,
+        quote: c.text ?? "",
+      })),
+      ...engagement.reactions.map((r) => ({
+        name: r.name ?? "",
+        headline: r.headline ?? "",
+        profileUrl: r.profileUrl ?? "",
+        kind: "reaction" as const,
+        quote: "",
+      })),
+    ].filter((e) => e.name || e.profileUrl);
+    for (const e of events) {
+      seen++;
+      let matched = "";
+      let becameWarm = false;
+      const event: EngagementEvent = {
+        post_id: url,
+        kind: e.kind,
+        at: new Date().toISOString(),
+        quote: e.quote,
+      };
+      await updateState((s) => {
+        const p = s.prospects.find(
+          (x) =>
+            (e.profileUrl && x.prospect.linkedin_url === e.profileUrl) ||
+            (e.name && x.prospect.name.toLowerCase() === e.name.toLowerCase())
+        );
+        if (!p) return;
+        if (
+          p.engagement_events.some(
+            (old) =>
+              old.post_id === event.post_id &&
+              old.kind === event.kind &&
+              old.quote === event.quote
+          )
+        )
+          return;
+        matched = p.id;
+        p.engagement_events.push(event);
+        p.gravity_score += event.kind === "comment" ? 18 : 8;
+        const comments = p.engagement_events.filter((x) => x.kind === "comment").length;
+        const reactions = p.engagement_events.filter((x) => x.kind === "reaction").length;
+        if (
+          p.state !== "warm" &&
+          p.state !== "in_conversation" &&
+          (comments >= WARM_TRIGGER.comments || reactions >= WARM_TRIGGER.reactions)
+        ) {
+          p.state = "warm";
+          becameWarm = true;
+        } else if (p.state === "modeled" || p.state === "cold") {
+          p.state = "engaged";
+        }
+        s.log.push({
+          at: event.at,
+          agent: "radar",
+          msg: `${p.prospect.name} ${event.kind === "comment" ? "commented on" : "reacted to"} your live post`,
+        });
+      });
+      if (matched && becameWarm) {
+        warm++;
+        await warmFlow(matched, event.quote);
+        continue;
+      }
+      if (!matched && e.kind === "comment") {
+        warm++;
+        await addSerendipityWarm(e.name, e.headline, e.profileUrl, event);
+      }
+    }
+  }
+  return seen
+    ? `Radar scanned ${postUrls.length} post${postUrls.length === 1 ? "" : "s"} · ${seen} engagement${seen === 1 ? "" : "s"} · ${warm} warm trigger${warm === 1 ? "" : "s"}`
+    : "Radar scanned the live post URLs, no engagement found yet.";
+}
+
+async function addSerendipityWarm(
+  name: string,
+  headline: string,
+  linkedin_url: string,
+  event: EngagementEvent
+) {
+  const id = slug(name || linkedin_url || `serendipity-${Date.now()}`);
+  const card: WarmCard = {
+    id: `warm-${id}`,
+    prospectId: "",
+    name: name || "Unknown engager",
+    title: headline || "ICP-fit engager",
+    event,
+    enriching: true,
+    email_draft: "",
+    connect_note: "",
+    serendipity: true,
+    sent: false,
+    called: false,
+    meeting: false,
+  };
+  await updateState((s) => {
+    s.warm.unshift(card);
+    s.log.push({
+      at: new Date().toISOString(),
+      agent: "radar",
+      msg: `${card.name} engaged on a live post — enriching for warm follow-up`,
+    });
+  });
+  const contact = await enrichContact({
+    id,
+    name: card.name,
+    company: headline,
+    linkedin_url,
+  });
+  const drafts = await draftOutreach(card.name, headline, event.quote ?? "", null);
+  const call = await draftCallScript(card.name, headline, event.quote ?? "", contact.phone);
+  await updateState((s) => {
+    const c = s.warm.find((w) => w.id === card.id);
+    if (!c) return;
+    c.enriching = false;
+    c.email = contact.email;
+    c.phone = contact.phone;
+    c.email_draft = drafts.email;
+    c.connect_note = drafts.note;
+    c.call_script = call;
+  });
+  void draftPitchBrief(card.id);
 }
 
 // Warm trigger fires JIT enrichment + outreach drafts (SPEC §3.6).
@@ -394,6 +986,7 @@ async function warmFlow(prospectId: string, quote?: string) {
     serendipity: false,
     meeting: false,
     sent: false,
+    called: false,
   };
   await updateState((s) => {
     p = s.prospects.find((x) => x.id === prospectId);
@@ -413,6 +1006,7 @@ async function warmFlow(prospectId: string, quote?: string) {
     linkedin_url: p.prospect.linkedin_url,
   });
   const drafts = await draftOutreach(p.prospect.name, p.prospect.title, quote ?? "", p);
+  const call = await draftCallScript(p.prospect.name, p.prospect.title, quote ?? "", contact.phone);
   await updateState((s) => {
     const c = s.warm.find((w) => w.id === card.id);
     const t = s.prospects.find((x) => x.id === prospectId);
@@ -426,6 +1020,7 @@ async function warmFlow(prospectId: string, quote?: string) {
       c.phone = contact.phone;
       c.email_draft = drafts.email;
       c.connect_note = drafts.note;
+      c.call_script = call;
     }
   });
   void draftPitchBrief(card.id); // brief is ready before any call or email
@@ -596,6 +1191,22 @@ async function draftOutreach(
     email: `Subject: the QA gap\n\nHi ${first} — ${hook} matches what we measured across 40 teams: everyone automated the sending, nobody automated the checking. That gap is what we work on. Worth 20 minutes next week to compare notes on what you're seeing internally?\n\n— Alex @ Loopwell`,
     note: `${first} — your point on ${noteHook} stuck with me. It's the problem we work on all day. Open to swapping notes?`,
   };
+}
+
+async function draftCallScript(
+  name: string,
+  title: string,
+  quote: string,
+  phone: string
+): Promise<string> {
+  const first = name.split(" ")[0];
+  const live = await think(
+    "radar",
+    `Write a 30-second AE call opener for ${name}, ${title}. Phone: ${phone || "unknown"}. They already saw us in-feed and engaged with: "${quote || "our post"}". Goal: book a 20-minute working session. No hype, no creepy wording. Return only the call script.`,
+    { deep: false }
+  );
+  if (live) return live;
+  return `Hi ${first}, quick one — I am calling because you ${quote ? `commented on the post about "${quote.slice(0, 50)}"` : "reacted to the outbound QA post"} and it maps to a pattern we are seeing in sales teams: AI increased sending, but QA stayed manual. Worth 20 minutes to compare what your team checks before messages ship?`;
 }
 
 // Agent-8 move: a tailored pitch brief per warm lead — their words, their

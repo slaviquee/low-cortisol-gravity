@@ -28,6 +28,8 @@ export default function Prospect({
         unknown prospect — <Link href="/board" className="link-green">→ back to board</Link>
       </p>
     );
+  const warmCard = state.warm.find((w) => w.prospectId === p.id);
+  const phone = warmCard?.phone ?? p.contact.phones[0];
 
   return (
     <div className="rise space-y-5">
@@ -181,10 +183,20 @@ export default function Prospect({
           <section className="card-dark p-5">
             <p className="text-[12.5px] text-white/60">contact — bought just-in-time</p>
             {p.contact.emails.length ? (
-              <p className="mono mt-2 text-[13px]">
-                ✉ {p.contact.emails[0]}
-                {p.contact.phones[0] && <> · ☎ {p.contact.phones[0]}</>}
-              </p>
+              <div className="mt-2">
+                <p className="mono text-[13px]">
+                  ✉ {p.contact.emails[0]}
+                  {phone && <> · ☎ {phone}</>}
+                </p>
+                {phone && (
+                  <a
+                    href={`tel:${phone.replace(/[^\d+]/g, "")}`}
+                    className="mt-3 inline-flex btn btn-ghost"
+                  >
+                    call after feed engagement →
+                  </a>
+                )}
+              </div>
             ) : (
               <p className="mt-2 text-[12.5px] text-white/50">
                 not purchased yet — fires at the warm trigger
