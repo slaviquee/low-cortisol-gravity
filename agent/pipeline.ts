@@ -587,19 +587,19 @@ export async function runPipeline(
     });
     await mark("listener", "running", `world model built: ${p.prospect.name}`);
     // The spoken web: web search finds appearances, Gradium STT transcribes.
-    // Real mode: findMediaAppearances() + transcribe(); mock shows Jane's.
-    if (p.id === "jane-kowalski") {
+    // Real mode: findMediaAppearances() + transcribe(); mock shows Nabla's.
+    if (p.id === "margaux-benoit") {
       await mark(
         "listener",
         "running",
-        "podcast found: Outbound Radio ep.42 → gradium transcript mined for stances"
+        "healthcare AI proof found → gradium-style transcript mined for workflow-trust stances"
       );
     }
   }
   await mark(
     "listener",
     "running",
-    "media mix analyzed: carousels lead for 2 of 3 buyers, text for one"
+    "media mix analyzed: mini-decks, evidence posts, and source-trail tables separated by cohort"
   );
   await sleep(mock ? 900 : 200);
   await mark("listener", "done", `${hot.length} Buyer World Models, every claim with evidence`);
@@ -625,7 +625,7 @@ export async function runPipeline(
   });
   // Cluster world models into taste cohorts: one post serves a cohort,
   // not a person — and performance gets scored per cohort.
-  await mark("strategist", "running", "clustering 3 world models → 2 taste cohorts (+1 quiet)…");
+  await mark("strategist", "running", "clustering 5 world models → 3 taste cohorts…");
   await sleep(mock ? 1600 : 300);
   const cohorts = mock ? fixtureCohorts() : deriveCohorts(prospects);
   await updateRunState(runId, (s) => {
@@ -635,7 +635,7 @@ export async function runPipeline(
     decide(
       b,
       "target content at taste cohorts, not individuals",
-      "chart skeptics (2 buyers) and systems thinkers (1) reward different formats — one post per cohort beats one post per person"
+      "product storytellers, trust-led AI buyers, and RevOps governance buyers reward different proof formats — one post per cohort beats one post per person"
     )
   );
   await mark("strategist", "running", "drafting the gravity plan: posts · comments · micro-actions…");
@@ -672,7 +672,11 @@ Create a 5-day plan with posts, comments, reacts/follows/connects. Each item tar
     s.plan = gated;
   });
   await updateBrain((b) =>
-    decide(b, "week-1 plan: tactical charts + influencer comments", "6/10 targets reward that format (world-model evidence)")
+    decide(
+      b,
+      "week-1 plan: product story + trust proof + RevOps source trail",
+      "the five cached accounts split into three evidence-backed cohorts"
+    )
   );
   await mark("strategist", "done", "5-day plan ready — evals passed, familiarity ladder sequenced");
 
@@ -725,7 +729,7 @@ export async function radarScan(postUrls: string[] = []): Promise<string> {
   const current = await getState();
   // Capability-based routing: scripted beats belong to the fixture world
   // only — never inject fictional engagement into a live-modeled board.
-  const fixtureWorld = current.prospects.some((p) => p.id === "jane-kowalski");
+  const fixtureWorld = current.prospects.some((p) => p.id === "olivia-frenkel");
   const scripted = forcedMock() || current.mock || (!process.env.APIFY_TOKEN && fixtureWorld);
   if (!scripted) {
     if (!urls.length) {
@@ -1186,7 +1190,7 @@ export async function replanFromEngagement(): Promise<number> {
   await updateBrain((b) =>
     decide(
       b,
-      "plan v2: shift effort toward the chart-skeptics cohort",
+      "plan v2: shift effort toward the trust-led enterprise AI cohort",
       `its content earned ${engaged} target engagements — best-performing cohort this week`
     )
   );
@@ -1200,7 +1204,7 @@ export async function replanFromEngagement(): Promise<number> {
     st.log.push({
       at: new Date().toISOString(),
       agent: "strategist",
-      msg: `plan v2 — tactical charts earned ${engaged} engagements; doubling down`,
+      msg: `plan v2 — workflow trust earned ${engaged} engagements; doubling down`,
     });
   });
   return fresh.length;
@@ -1275,11 +1279,11 @@ async function draftOutreach(
     ? `your comment on yesterday's post ("${quote.slice(0, 60)}…")`
     : "your reaction to yesterday's post";
   const noteHook = quote
-    ? "the QA gap you called out"
-    : "exactly the QA gap from that post";
+    ? "the familiarity-before-outreach point you called out"
+    : "the familiarity-before-outreach point from that post";
   return {
-    email: `Subject: the QA gap\n\nHi ${first} — ${hook} matches what we measured across 40 teams: everyone automated the sending, nobody automated the checking. That gap is what we work on. Worth 20 minutes next week to compare notes on what you're seeing internally?\n\n— Alex @ Loopwell`,
-    note: `${first} — your point on ${noteHook} stuck with me. It's the problem we work on all day. Open to swapping notes?`,
+    email: `Subject: familiarity before outreach\n\nHi ${first} — ${hook} is exactly the shift Gravity is built for: map the buyer's public world first, create useful content inside it, then enrich only after real engagement.\n\nWorth 15 minutes to compare how this would fit your GTM motion?\n\n— Guillaume @ Gravity`,
+    note: `${first} — your point on ${noteHook} stuck with me. It is the problem Gravity works on all day. Open to swapping notes?`,
   };
 }
 
@@ -1296,7 +1300,7 @@ async function draftCallScript(
     { deep: false }
   );
   if (live) return live;
-  return `Hi ${first}, quick one — I am calling because you ${quote ? `commented on the post about "${quote.slice(0, 50)}"` : "reacted to the outbound QA post"} and it maps to a pattern we are seeing in sales teams: AI increased sending, but QA stayed manual. Worth 20 minutes to compare what your team checks before messages ship?`;
+  return `Hi ${first}, quick one — I am calling because you ${quote ? `commented on the post about "${quote.slice(0, 50)}"` : "reacted to the familiarity-before-outreach post"} and it maps to a pattern we are seeing in GTM teams: AI made outreach cheaper, but familiarity still has to be earned. Worth 15 minutes to compare how your team could warm the path before the first ask?`;
 }
 
 // Agent-8 move: a tailored pitch brief per warm lead — their words, their
@@ -1318,8 +1322,10 @@ export async function draftPitchBrief(cardId: string): Promise<string> {
     );
   }
   if (!brief) {
-    const topics = model?.topics.map((t) => t.topic).join(" · ") || "outbound efficiency";
-    brief = `pitch brief — ${card.name}\n\n1 · open on their words\n    "${quote || "the QA gap in automated outbound"}"\n2 · their world\n    ${topics}\n3 · your proof (their format: numbers first)\n    12,000 emails audited — 4.1% → 2.3% reply rate without QA\n4 · the fix, in their workflow\n    score every touch before it ships; fewer, better sends\n5 · the ask\n    20-minute working session on ${first}'s own numbers\n\n→ paste into gamma.app — a per-lead deck in one click`;
+    const topics =
+      model?.topics.map((t) => t.topic).join(" · ") ||
+      "familiarity before outreach";
+    brief = `pitch brief — ${card.name}\n\n1 · open on their words\n    "${quote || "familiarity before outreach"}"\n2 · their world\n    ${topics}\n3 · Gravity's proof point\n    public signals -> Buyer World Model -> cohort content -> warm trigger -> just-in-time enrichment\n4 · the fix, in their workflow\n    do not enrich first; earn recognition, then draft from the real engagement\n5 · the ask\n    15-minute teardown of ${first}'s warm-GTM path\n\n→ paste into gamma.app — a per-lead deck in one click`;
   }
   await updateState((st) => {
     const c = st.warm.find((w) => w.id === cardId);

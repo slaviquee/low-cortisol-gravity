@@ -75,9 +75,9 @@ function SceneCrm() {
 
 function SceneTaste() {
   const rows = [
-    { role: "vp sales", taste: "tactical charts, as carousels · hates spam", heat: 89 },
-    { role: "cro", taste: "contrarian short text, numbers-first", heat: 71 },
-    { role: "head of revops", taste: "workflow breakdowns · carousels + video", heat: 64 },
+    { role: "product gtm", taste: "visual product stories · mini-decks", heat: 84 },
+    { role: "healthcare gtm", taste: "workflow trust · evidence-backed posts", heat: 82 },
+    { role: "revops stack", taste: "source trails · crm-ready status", heat: 52 },
   ];
   return (
     <div>
@@ -93,7 +93,7 @@ function SceneTaste() {
       </div>
       <Line delay={840}>
         <span className="link-green">→</span> profiles cluster into taste
-        cohorts: chart skeptics (2) · systems thinkers (1)
+        cohorts: product storytellers (2) · trust-led AI (2) · RevOps governance (1)
       </Line>
     </div>
   );
@@ -105,8 +105,8 @@ function ScenePlan() {
       <p className="mono label rise">04 · it generates gravity, per cohort</p>
       <div className="mt-3 space-y-1.5">
         {[
-          ["→ post", "a carousel chart, for the chart skeptics", "eval 100"],
-          ["→ comment", "in the threads systems thinkers read", ""],
+          ["→ post", "a mini-deck for product-led storytellers", "eval 100"],
+          ["→ comment", "inside healthcare workflow-trust threads", ""],
           ["→ connect", "third touch, never the first", ""],
         ].map(([t, d, e], i) => (
           <p key={i} className="rise text-[12.5px]" style={{ animationDelay: `${150 + i * 200}ms` }}>
@@ -126,8 +126,9 @@ function ScenePlan() {
 
 function SceneLoop() {
   const perf = [
-    { name: "chart skeptics", eng: 3, warm: 2, w: 100 },
-    { name: "systems thinkers", eng: 1, warm: 0, w: 33 },
+    { name: "trust-led AI", eng: 2, warm: 1, w: 100 },
+    { name: "product storytellers", eng: 2, warm: 1, w: 75 },
+    { name: "RevOps governance", eng: 1, warm: 1, w: 55 },
   ];
   return (
     <div>
@@ -199,7 +200,7 @@ function DemoStage() {
 /* ── partners ── */
 
 function Partners() {
-  const names = ["Anthropic", "Sillage", "FullEnrich", "Gamma", "Gradium"];
+  const names = ["Anthropic", "Sillage", "FullEnrich", "Apify", "Gradium"];
   return (
     <div className="mt-10 text-center">
       <p className="label" style={{ fontSize: 10.5 }}>

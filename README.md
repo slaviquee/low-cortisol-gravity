@@ -1,169 +1,203 @@
 # Gravity
 
-**Build enough relevance that your buyers discover you before you discover them.**
+> Build enough relevance that your buyers discover you before you discover them.
 
-Everyone else automates cold outreach. Gravity automates *becoming a familiar
-name before the outreach ever happens* — it maps each buyer's information
-bubble from public signals, generates the content and micro-actions that put
-you inside it, and only fires outreach once the buyer has engaged with *you*.
+Gravity is an agentic GTM system that maps the public information bubble around
+target buyers, creates content and micro-actions that make your company familiar
+to them, and only triggers outreach after real engagement.
 
-Built in one day at the **Agentic GTM Hackathon** (Station F, Paris) with
-Anthropic, Sillage, and FullEnrich. Full product spec: [SPEC.md](SPEC.md).
+**Final thesis:** outbound is not dead. Cold outbound is dead. Gravity makes
+outreach warm before it is sent.
 
-## The loop
+## The Problem
 
+Cold outbound is collapsing because every inbox is filled with the same
+AI-generated personalization. Most GTM AI tools start too late: they pick a lead,
+enrich the contact, generate a fake-personal email, and send it into a crowded
+inbox.
+
+The missing step is familiarity: being recognized before you ask for a meeting.
+
+## The Insight
+
+Every buyer lives inside an information bubble: topics they reward, formats they
+trust, people they follow, proof they need, and posts they engage with. Gravity
+maps that bubble and helps you enter it before outreach.
+
+Cold email tools personalize the message.
+Gravity personalizes the path before the message.
+
+## The Loop
+
+```text
+Website + target accounts
+-> Scout: product narrative + ICP
+-> Resolver: buyer identification
+-> Listener: public Buyer World Models
+-> Strategist: Gravity Map + taste cohorts + content plan
+-> Radar: engagement detection
+-> FullEnrich: just-in-time enrichment
+-> Warm outreach draft
 ```
-your website + target accounts
-        ▼
-Scout      reads your site → ICP → pushes persona + accounts into Sillage
-Resolver   names the buyers (Sillage mappings + FullEnrich search) · heat triage
-Listener   scrapes each hot prospect's public footprint → Buyer World Models
-Strategist Gravity Map → taste cohorts → 5-day plan, one cohort per action
-Radar      watches YOUR posts → per-cohort attribution → warm trigger →
-           just-in-time enrichment → the touch
+
+The magic moment: a buyer comments on your post, the Gravity Score jumps, the
+state flips from `modeled` to `warm`, contact enrichment runs only then, and the
+AE gets a brief grounded in the real engagement.
+
+## What Is Built
+
+| Surface | Status |
+|---|---|
+| Website-to-ICP Scout | Built |
+| Prospect board | Built |
+| Buyer World Model schema | Built |
+| Cached demo accounts | Built |
+| Evidence links per claim | Built |
+| Gravity plan generator | Built |
+| Warm queue | Built |
+| Radar scripted demo scans | Built |
+| Just-in-time enrichment flow | Built / mocked depending on keys |
+| Pitch brief for warm lead | Built |
+| Live LinkedIn auto-actions | Not built, intentionally human-in-the-loop |
+
+## Demo Accounts
+
+The cached demo uses five public company accounts represented in the room. Person
+names and roles come from the hackathon roster provided to the team; company
+claims come from public company sources. Placeholder contacts use reserved
+`.example` emails so the demo does not imply private scraping.
+
+| Account | Website | Demo buyer | Why it matters | Gravity action |
+|---|---|---|---|---|
+| Gamma | `https://gamma.app/` | Olivia Frenkel, GTM | AI-native creation, product storytelling, decks, docs, social content, API output | Mini-deck post: "The new GTM funnel starts before outreach" |
+| Nabla | `https://www.nabla.com/` | Margaux Benoit, GTM Director | Healthcare AI needs workflow trust, clinician proof, and adoption evidence | Comment/post: "Healthcare AI adoption is won by workflow trust" |
+| Airtable | `https://www.airtable.com/` | Vincent Gonnot, RVP EMEA | Enterprise AI must live inside workflows, data, permissions, and systems of record | Carousel/post: "AI GTM fails outside the revenue operating system" |
+| Foundever | `https://foundever.com/` | Virginie Dupin, CMO | Global CX buyers care about brand trust, human connection, multilingual consistency | Thought-leadership post: "AI should reveal the human signal earlier" |
+| Edenred | `https://www.edenred.com/` | Christa Dabilly, Head of Tech Stack for RevOps | RevOps buyers reward CRM hygiene, source trails, governance, and data minimization | RevOps view: source, score change, state, next step, CRM-ready fields |
+
+Deep fixture data lives in [`data/fixtures.ts`](data/fixtures.ts). The five
+default target domains are:
+
+```ts
+["gamma.app", "nabla.com", "airtable.com", "foundever.com", "edenred.com"]
 ```
 
-The magic moment: *"This VP Sales commented on your Tuesday post. Here's her
-verified email, a connection note, and a draft that mentions it. Send?"*
+Customer-side lead research for the judge/mentor companies lives in
+[`docs/customer-lead-research.md`](docs/customer-lead-research.md), with a
+code-ready export in [`data/customer-leads.ts`](data/customer-leads.ts). These
+are potential customers for those companies, not internal stakeholders.
 
-## Run it
+## Architecture
+
+```text
+Website / CRM / target list
+-> Scout
+-> Sillage signals + account mapping
+-> FullEnrich people search
+-> heat triage
+-> public LinkedIn / X / web signals
+-> Claude Buyer World Models
+-> Gravity Map
+-> content + micro-actions
+-> Radar engagement scan
+-> warm trigger
+-> FullEnrich just-in-time enrichment
+-> outreach draft + pitch brief
+```
+
+Sponsor APIs are part of the core loop:
+
+- **Anthropic** powers the agent crew and content reasoning.
+- **Sillage** supplies account signals, stakeholder mapping, and timing.
+- **FullEnrich** runs only at the warm trigger for contact enrichment.
+
+## Demo
+
+1. Paste the website.
+2. Load five target accounts: Gamma, Nabla, Airtable, Foundever, Edenred.
+3. Watch Scout, Resolver, Listener, Strategist, and Radar run.
+4. Open the board and inspect Buyer World Models with evidence links.
+5. Approve the 5-day gravity plan.
+6. Click `scan engagement`.
+7. See a buyer flip Warm and receive a non-cold email draft.
+
+Recommended stage mode:
+
+```bash
+GRAVITY_MOCK=1 npm run dev
+```
+
+This uses the deterministic cached workspace. Live APIs are optional proof, not
+the stage path.
+
+## Two-Minute Script
+
+**0:00-0:20 - Input**
+
+"Every GTM AI tool starts too late. They pick a lead, generate a fake-personal
+cold email, and send it into an inbox full of other AI emails. Gravity starts
+earlier. Here I paste our website and five target accounts: Gamma, Nabla,
+Airtable, Foundever, and Edenred."
+
+**0:20-0:45 - Agent Board**
+
+"Scout reads our site and turns it into an ICP. Resolver finds the right buyers.
+Listener builds a public Buyer World Model. Strategist clusters buyers into
+taste cohorts. Radar watches for engagement. The important part: we do not buy
+contact data yet."
+
+**0:45-1:10 - World Model**
+
+"Here is Gamma: product-led demos and visual storytelling. Here is Nabla:
+workflow trust and healthcare adoption. Here is Airtable: operational AI inside
+workflows. Every claim has an evidence link, so this is not hallucinated
+personalization."
+
+**1:10-1:35 - Gravity Plan**
+
+"Instead of saying 'send five cold emails,' Gravity gives us a 5-day familiarity
+plan: a LinkedIn post, comments inside the buyer's information bubble, and a
+connection step. Each action explains which cohort it targets and why it should
+land."
+
+**1:35-1:55 - Magic Moment**
+
+"Now Radar scans engagement. Margaux comments that workflow trust is the real
+bottleneck. The score jumps, the state flips from Modeled to Warm, FullEnrich
+runs just-in-time, and now we get a verified-contact slot plus a draft that
+references the actual engagement."
+
+**1:55-2:00 - Close**
+
+"We did not automate spam. We automated becoming familiar before outreach."
+
+## Run It
 
 ```bash
 npm install
-npm run dev        # http://localhost:3000
+npm run dev
 ```
 
-Works with **zero API keys** — the whole loop runs on a cached demo world
-(fictional prospects, scripted engagement) so nothing ever blocks on a third
-party. Set `GRAVITY_MOCK=1` to force this deterministic demo world even on a
-machine with credentials (recommended on stage). Add keys in `.env` (see
-`.env.example`) and each layer switches to live data independently:
+Open `http://localhost:3000`.
 
-| Key | Unlocks |
-|---|---|
-| `ANTHROPIC_API_KEY` | Claude: website distillation, world models, gravity map, content, outreach (optional if the machine has a Claude Code subscription login — the managed crew rides it) |
-| `SILLAGE_API_KEY` | intent signals + company→people mappings (`sk_live_` REST; MCP uses OAuth) |
-| `FULLENRICH_API_KEY` | people search + just-in-time email/phone enrichment |
-| `APIFY_TOKEN` | LinkedIn behavioral layer (harvestapi actors) |
-| `X_API_KEY` | X timelines + following lists (pay-per-use; optional — with `APIFY_TOKEN` set, the cheaper X actors run first) |
-| `HUBSPOT_TOKEN` | the CRM pipe as input: open deals accelerated, closed-lost re-warmed, closed-won → lookalikes |
-| `GRADIUM_API_KEY` | speech-to-text on podcast/video appearances → taste signals in the world model |
-| `XAI_API_KEY` | `x_search` — handle-filtered semantic search over X |
+Useful checks:
 
-The agent layer follows Anthropic's **goals → loops → evals** pattern: each
-agent has an explicit goal + self-eval rubric in its prompt; create↔measure
-is a standing loop (`↻ regenerate from engagement`); every draft passes an
-eval gate (their format · our voice · evidence · zero slop) with bounded
-auto-revision. Buyers cluster into **taste cohorts** (chart skeptics,
-systems thinkers, quiet execs) — every action targets a cohort, not a
-person, in the **medium** its members reward (text / image / carousel /
-video — read from the post types they engage with on LinkedIn and X);
-engagement is scored per cohort; and the cohorts themselves learn:
-a buyer who never reacts gets re-seated each cycle until they sit where
-they engage. Serendipitous engagers join the cohort whose content pulled
-them in. The **Company Brain** (`/brain`) persists across runs —
-narrative, ICP, tone of voice from your own posts, content performance,
-your steering notes, decisions-with-reasons — and every generation reads it.
-
-Managed-crew auth: the Agent SDK picks up `ANTHROPIC_API_KEY`, or a Claude
-subscription via `claude setup-token` → put the token in
-`CLAUDE_CODE_OAUTH_TOKEN`. On a 401 (stale login), re-run `claude setup-token`
-— the app just falls back to fixtures in the meantime.
-
-Demo flow: paste a website → **build gravity** → watch the crew on
-`/board` → review `/plan` → paste your published post URLs on `/warm` and hit
-**scan engagement** to close the loop. With `GRAVITY_MOCK=1`, Radar uses the
-deterministic engagement script instead. The warm trigger now runs
-FullEnrich just-in-time for email + phone, drafts the email/connection note,
-and gives the AE a call script for the post-engaged buyer.
-
-## Stack
-
-- **Claude managed agents** — the crew (scout / listener / strategist /
-  radar) is defined via the Agent SDK's `options.agents`: sonnet runs the
-  parallel prospect modelers, **fable writes every human-facing word**
-  (posts, comments, outreach, pitch briefs) under an explicit anti-slop
-  contract baked into the prompts — casual, specific, zero AI tells, with
-  a banned-phrase eval gate behind it; headless with schema-validated
-  outputs;
-  authenticates with an API key **or** the team's Claude subscription login
-  (`claude setup-token`), with direct `@anthropic-ai/sdk` as fallback;
-  sponsor MCPs connect through the same SDK
-  (`api.getsillage.com/api/mcp/v2`, `mcp.fullenrich.com/mcp`)
-- **Sillage** — wired per their docs: headless = the documented REST API
-  (`sk_live_`, real paths: `PUT /api/v2/persona`,
-  `POST /api/v2/top-account-list/accounts`, `GET /api/v2/company-mappings`);
-  interactive = their MCP (`SILLAGE_MCP=1` attaches
-  `api.getsillage.com/api/mcp/v2` to the managed crew — OAuth 2.1 login);
-  their skills pack is installed in-repo (`npx skills add sillage-labs/skills`
-  → `.claude/skills/`), incl. `sillage-api`, their designed headless pairing
-- **Demo spend guards** — a full live demo run stays in pocket-change
-  territory: 5 accounts resolved, 3 people per mapping, email-only
-  enrichment (phones only at Warm), 3 enrichments + 20 events per scan,
-  serendipity deduped across rescans, 50-cap follows, 30+30 post
-  engagement, one 4k-char transcript for the hottest prospect only
-- **FullEnrich** — synchronous people search + async bulk enrichment,
-  fired just-in-time: contact data is bought only at the moment of intent
-- **Apify** — cookie-free LinkedIn actors by
-  [HarvestAPI](https://apify.com/harvestapi): profile, posts, activity
-  (comments/reactions), post engagement, post search; plus X actors
-  (apidojo tweet-scraper, xquik follower-scraper) as the cheap raw-X path
-- **X API** (pay-per-use, ToS-cleanest X path) + **xAI** Agent Tools `x_search`
-- **HubSpot** — the pipe as input (open / closed-lost / won deals) ·
-  **Gradium** — STT on the spoken web (podcasts, talks) for taste signals
-- Next.js 15 · TypeScript · Tailwind v4 · Geist + IBM Plex Mono +
-  Instrument Serif accents
-
-## Deploy
-
-Production deploys are driven by `.github/workflows/deploy.yml`. Every push to
-`main` runs two CLI jobs:
-
-- **Vercel production** — `vercel pull`, `vercel build --prod`, then
-  `vercel deploy --prebuilt --prod`.
-- **Railway production** — `railway up` against the `gravity` service in
-  Guillaume DERAMCHI's personal Railway workspace.
-
-GitHub secrets required by the workflow:
-
-- `VERCEL_TOKEN`
-- `RAILWAY_API_TOKEN`
-
-Runtime API keys stay in the hosting providers, not in git. Configure these in
-both Vercel and Railway production environments as needed:
-
-- `ANTHROPIC_API_KEY`
-- `SILLAGE_API_KEY`
-- `FULLENRICH_API_KEY`
-- `APIFY_TOKEN`
-- `HUBSPOT_TOKEN`
-- `GRADIUM_API_KEY`
-
-Railway is the full long-running host: file state, background pipeline work,
-and the Agent SDK subprocess run normally. Vercel can run the same API path,
-but state/brain writes use temporary storage on serverless; set
-`GRAVITY_MOCK=1` when you want the deterministic public-demo flow. Use a
-durable store such as Redis/KV before relying on Vercel state across cold
-starts.
+```bash
+npm run test:mock
+npm run build
+```
 
 ## Ethics
 
-Public signals only (posts, public activity, follow lists) + licensed sponsor
-data. X likes are private and never touched. No auto-actions on LinkedIn —
-humans execute with one-click deep links. Contact data is purchased only at
-intent-to-contact (data minimization). Relevance engine, never surveillance.
+Public signals only. No LinkedIn auto-actions. No private likes. Contact
+enrichment happens only when there is intent to contact. Humans approve all
+posts, comments, connection notes, and emails.
 
 ## Credits
 
 Sponsor APIs: [Anthropic Claude](https://www.anthropic.com) ·
-[Sillage](https://getsillage.com) · [FullEnrich](https://fullenrich.com).
-Third-party: [Apify](https://apify.com) + HarvestAPI & apidojo actors ·
-[xAI](https://x.ai) · [X API](https://docs.x.com) ·
-[Next.js](https://nextjs.org) · [Tailwind CSS](https://tailwindcss.com) ·
-Google Fonts (Geist, IBM Plex Mono, Instrument Serif). All fixture people
-and companies are fictional.
+[Sillage](https://www.getsillage.com/) · [FullEnrich](https://fullenrich.com/).
 
 Team: [@slaviquee](https://github.com/slaviquee) ·
 [@gibouu](https://github.com/gibouu) ·
-[@gderamchi](https://github.com/gderamchi) — built with
-[Claude Code](https://claude.com/claude-code). #agentic-gtm
+[@gderamchi](https://github.com/gderamchi).

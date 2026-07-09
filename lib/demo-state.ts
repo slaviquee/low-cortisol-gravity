@@ -5,6 +5,7 @@ import {
   FIXTURE_SUMMARY,
   FIXTURE_TARGETS,
   FIXTURE_WEBSITE,
+  fixtureCohorts,
   fixturePlan,
   fixtureProspects,
 } from "@/data/fixtures";
@@ -36,8 +37,8 @@ function outreach(name: string, quote = "") {
     ? `your comment on yesterday's post ("${quote.slice(0, 60)}...")`
     : "your reaction to yesterday's post";
   return {
-    email: `Subject: the QA gap\n\nHi ${first} - ${hook} matches what we measured across 40 teams: everyone automated the sending, nobody automated the checking. Worth 20 minutes next week to compare notes?\n\n- Alex @ Loopwell`,
-    note: `${first} - enjoyed your take on yesterday's thread. We're working on that QA gap. Happy to swap notes.`,
+    email: `Subject: familiarity before outreach\n\nHi ${first} - ${hook} is exactly the shift Gravity is built around: map the buyer's public world first, create something useful inside it, then enrich only after engagement.\n\nWorth 15 minutes to compare how this would fit your GTM motion?\n\n- Guillaume @ Gravity`,
+    note: `${first} - saw your engagement on the familiarity-before-outreach post. Curious if this maps to how your team thinks about warm GTM.`,
   };
 }
 
@@ -85,7 +86,7 @@ function applyRadarScans(state: AppState, scans: number) {
         contact: { emails: [], phones: [] },
         signals: [],
         topics: [],
-        formats: ["tactical_charts"],
+        formats: ["evidence_backed_posts"],
         media: [{ kind: "carousel", share: 0.6 }, { kind: "image", share: 0.4 }],
         influencers: [],
         behavior: "commenter",
@@ -146,6 +147,7 @@ export function demoState(scans = 0): AppState {
           : "demo fixtures ready",
   }));
   state.prospects = prospects;
+  state.cohorts = fixtureCohorts();
   state.gravity_map = FIXTURE_GRAVITY_MAP;
   state.plan = demoPlan();
   state.run_started_at = new Date().toISOString();

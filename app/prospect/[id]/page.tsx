@@ -45,10 +45,16 @@ export default function Prospect({
               {p.prospect.name}
             </h1>
             <p className="label mt-0.5">
-              {p.prospect.title} @ {p.prospect.company} ·{" "}
-              <a href={p.prospect.linkedin_url} className="link-green" target="_blank" rel="noreferrer">
-                linkedin
-              </a>
+              {p.prospect.title} @ {p.prospect.company}
+              {p.prospect.linkedin_url && (
+                <>
+                  {" "}
+                  ·{" "}
+                  <a href={p.prospect.linkedin_url} className="link-green" target="_blank" rel="noreferrer">
+                    public source
+                  </a>
+                </>
+              )}
               {p.prospect.x_handle && (
                 <span className="mono"> · {p.prospect.x_handle}</span>
               )}

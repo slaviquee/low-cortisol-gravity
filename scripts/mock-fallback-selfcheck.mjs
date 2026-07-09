@@ -31,7 +31,7 @@ async function json(path, init) {
 }
 
 async function pollDone() {
-  for (let i = 0; i < 80; i++) {
+  for (let i = 0; i < 140; i++) {
     const state = await json("/api/state");
     if (state.run_done) return state;
     await new Promise((r) => setTimeout(r, 300));
@@ -39,47 +39,60 @@ async function pollDone() {
   throw new Error("pipeline did not finish");
 }
 
+async function pollWarm(predicate) {
+  for (let i = 0; i < 40; i++) {
+    const state = await json("/api/state");
+    if (predicate(state)) return state;
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  throw new Error("warm trigger did not appear");
+}
+
 try {
   await waitForServer();
   await json("/api/run", {
     method: "POST",
     body: JSON.stringify({
-      website: "loopwell.io",
-      targets: ["aquila-systems.com", "bluenote.io"],
+      website: "gravity-demo.example",
+      targets: ["gamma.app", "nabla.com"],
     }),
   });
   await json("/api/run", {
     method: "POST",
     body: JSON.stringify({
-      website: "freshgravity.io",
-      targets: ["aquila-systems.com", "bluenote.io"],
+      website: "pitchgravity.example",
+      targets: ["gamma.app", "nabla.com"],
     }),
   });
   let state = await pollDone();
-  assert.equal(state.input.website, "freshgravity.io");
-  assert.equal(state.log.some((line) => line.msg.includes("loopwell.io")), false);
+  assert.equal(state.input.website, "pitchgravity.example");
+  assert.equal(state.log.some((line) => line.msg.includes("gravity-demo.example")), false);
   assert.equal(state.mock, true);
-  assert.ok(state.prospects.some((p) => p.id === "jane-kowalski"));
-  assert.ok(state.plan.some((p) => p.id === "p-tue-post"));
+  assert.ok(state.prospects.some((p) => p.id === "olivia-frenkel"));
+  assert.ok(state.prospects.some((p) => p.id === "margaux-benoit"));
+  assert.ok(state.plan.some((p) => p.id === "p-tue-post-familiarity"));
 
   await json("/api/radar", { method: "POST", body: "{}" });
   await json("/api/radar", { method: "POST", body: "{}" });
-  state = await json("/api/state");
-  assert.ok(state.warm.some((w) => w.serendipity));
+  await json("/api/radar", { method: "POST", body: "{}" });
+  state = await pollWarm((s) =>
+    s.warm.some((w) => w.prospectId === "margaux-benoit") &&
+    s.warm.some((w) => w.prospectId === "olivia-frenkel")
+  );
 
   await Promise.all([
     json("/api/plan", {
       method: "PATCH",
-      body: JSON.stringify({ id: "p-tue-post", done: true }),
+      body: JSON.stringify({ id: "p-tue-post-familiarity", done: true }),
     }),
     json("/api/plan", {
       method: "PATCH",
-      body: JSON.stringify({ id: "p-tue-comment", done: true }),
+      body: JSON.stringify({ id: "p-tue-comment-healthcare-trust", done: true }),
     }),
   ]);
   state = await json("/api/state");
-  assert.equal(state.plan.find((p) => p.id === "p-tue-post")?.done, true);
-  assert.equal(state.plan.find((p) => p.id === "p-tue-comment")?.done, true);
+  assert.equal(state.plan.find((p) => p.id === "p-tue-post-familiarity")?.done, true);
+  assert.equal(state.plan.find((p) => p.id === "p-tue-comment-healthcare-trust")?.done, true);
   console.log("mock fallback self-check passed");
 } finally {
   dev.kill("SIGTERM");
