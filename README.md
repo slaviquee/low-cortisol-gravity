@@ -43,7 +43,7 @@ live data independently:
 | `SILLAGE_API_KEY` | intent signals + company→people mappings (`sk_live_` REST; MCP uses OAuth) |
 | `FULLENRICH_API_KEY` | people search + just-in-time email/phone enrichment |
 | `APIFY_TOKEN` | LinkedIn behavioral layer (harvestapi actors) |
-| `X_API_KEY` | X timelines + following lists (pay-per-use) |
+| `X_API_KEY` | X timelines + following lists (pay-per-use; optional — with `APIFY_TOKEN` set, the cheaper X actors run first) |
 | `XAI_API_KEY` | `x_search` — handle-filtered semantic search over X |
 
 Demo flow: paste a website → **build gravity** → watch the crew on
@@ -64,8 +64,9 @@ engager who was never on the target list).
   fired just-in-time: contact data is bought only at the moment of intent
 - **Apify** — cookie-free LinkedIn actors by
   [HarvestAPI](https://apify.com/harvestapi): profile, posts, activity
-  (comments/reactions), post engagement, post search
-- **X API** (pay-per-use) + **xAI** Agent Tools `x_search`
+  (comments/reactions), post engagement, post search; plus X actors
+  (apidojo tweet-scraper, xquik follower-scraper) as the cheap raw-X path
+- **X API** (pay-per-use, ToS-cleanest X path) + **xAI** Agent Tools `x_search`
 - Next.js 15 · TypeScript · Tailwind v4 · IBM Plex Mono + Instrument Serif
 
 ## Ethics

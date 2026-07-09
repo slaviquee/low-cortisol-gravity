@@ -28,7 +28,7 @@ A six-stage pipeline run by a crew of five named Claude agents (meet them in §4
 2. **Resolve** — identity now, contact data later. Sillage's company mappings hand over *matched people profiles* per account (`get_company_mapping`); FullEnrich **people search** (`POST /people/search`, synchronous, 0.25 credits) fills the gaps ("VP Sales at acme.com" → named people + LinkedIn URLs). X handles: xAI `x_search` on name + company → candidate handles → Claude keeps only bio-verified matches. A cheap **heat triage** (last-post / last-reaction dates, one actor call per prospect) then splits the list: socially active **hot** prospects get the full treatment; quiet ones drop to a **low-orbit** bucket (email-first, Sillage-timed) so no scrape credits or content effort are spent on empty feeds. **Full enrichment is deliberately just-in-time** (async, ~45–60s, poll it — success-only billing: 1 credit per work email, 10 per phone; the LinkedIn URL boosts hit rates): low-orbit prospects get emails immediately (their path *is* email), hot prospects only at the **Warm** trigger — we don't buy contact data until we intend to make contact. Cheaper, and a cleaner privacy story.
 3. **Listen** — Scrape each **hot** prospect's public footprint:
    - **LinkedIn** via Apify (harvestapi actors): profile, their posts, and their activity feed — the comments + reactions they *leave* (public on LinkedIn; this is the "content they like" layer)
-   - **X**, two complementary reads: the **official X API** (pay-per-use credits since Feb 2026, instant signup) pulls the raw timeline and **following list** (~$1 per 200 posts, ~$5 per 500-account follow list); **xAI `x_search`** (Agent Tools on `/v1/responses`, `allowed_x_handles` + date filters, ~$0.005/search) answers semantic questions with cited posts — "what does she argue about?". *(X likes went private in 2024 — we infer taste from replies/quotes/follows, and we say so if asked.)*
+   - **X**, three reads — cheapest capable source first: **Apify X actors** pull raw timelines + following lists at scraper prices (`apidojo/tweet-scraper` ≈ $0.02/prospect; `xquik/x-follower-scraper` ≈ $0.15/1k follows); the **official X API** (pay-per-use since Feb 2026, instant signup) is the ToS-cleanest alternative (~$1 per 200 posts, ~$5 per 500 follows); **xAI `x_search`** (Agent Tools on `/v1/responses`, `allowed_x_handles` + date filters, ~$0.005/search) answers semantic questions with cited posts — "what does she argue about?". *(X likes went private in 2024 — we infer taste from replies/quotes/follows, and we say so if asked.)*
 4. **Model** — One Claude subagent per prospect, in parallel, each emitting a structured **Buyer World Model** (schema in §6): topics, formats they reward, influencers in their orbit, stances, what they post vs. only consume — every claim tied to evidence URLs. A synthesis pass merges them into the **Gravity Map**: the shared conversation your ICP is already having, and where it happens.
 5. **Create** — Claude generates a 5-day **gravity plan** from the world models, the Gravity Map, and Sillage's signal matches + generated briefs (`get_contents`) — three action types:
    - **Posts** (LinkedIn + X, format-tuned, 2 variants each to A/B): *"6 of your 10 targets engaged with tactical charts about SDR productivity this month — this post is that format, on that topic, tied to your product narrative."*
@@ -138,7 +138,7 @@ paste your website ▸ crew runs (~2 min)
 | Intent signals | **Sillage** | via their **MCP** (OAuth, no key), driven by their open-source **skills pack**: Champion/Competitor/Hiring agents, keyword signal runs, company mappings with *named people* (stages 1–2), content angles (stage 5); REST (`sk_live_`) fallback |
 | People data | **FullEnrich** | people **search** resolves identity (stage 2); **enrichment** is just-in-time — emails for the low-orbit path, email+phone at the Warm trigger and for ICP-fit engagers (stage 6); MCP server available |
 | LinkedIn data | Apify | verified actors below |
-| X data | X API + xAI `x_search` | pay-per-use reads (timeline, following list) + handle-filtered semantic search on grok-4.1-fast; flat-rate demo alt: Hermes Agent (SuperGrok OAuth) |
+| X data | Apify actors + X API + xAI `x_search` | raw timelines/follows via actors (often 10–100× cheaper), official pay-per-use API as ToS-cleanest path, handle-filtered semantic search on grok-4.1-fast; flat-rate demo alt: Hermes Agent (SuperGrok OAuth) |
 
 **Apify actors** (all verified live 2026-07-08, all cookie-free; `harvestapi` runs ~2.5× cheaper than the `apimaestro` equivalents — keep those as fallback):
 
@@ -148,7 +148,7 @@ paste your website ▸ crew runs (~2 min)
 - Engagement on **our** posts (stage 6): `harvestapi/linkedin-post-reactions` + `harvestapi/linkedin-post-comments` — $2/1k, returns reactor name/headline/profile URL
 - Influencer-post discovery for the comment plan (stage 5): `harvestapi/linkedin-post-search` — $1.50/1k
 - People-search backup if FullEnrich search misses someone: `harvestapi/linkedin-company-employees` — title-filtered employees of a given company
-- X raw-timeline fallback: `apidojo/tweet-scraper` ($0.40/1k, 50-tweet min); X following-list alternative: `xquik/x-follower-scraper` ($0.10–0.15/1k)
+- X timeline, cheap primary: `apidojo/tweet-scraper` — $0.40/1k, 50-tweet min; X following list: `xquik/x-follower-scraper` — $0.10–0.15/1k (the official X API stays the ToS-cleanest fallback for both)
 
 Run each actor **once per prospect and cache** — the whole day's data for ~50 prospects costs under $20, and the demo must never depend on a live third party.
 
@@ -224,7 +224,7 @@ heat triage ── hot → deep listen · quiet →
    │
    ├───────────────────────┐
    ▼                       ▼
-LinkedIn via Apify:     X via X API + x_search:
+LinkedIn via Apify:     X via actors/API + search:
 profile · posts ·       timeline · replies ·
 activity feed           following
    │                       │

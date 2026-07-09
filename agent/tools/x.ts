@@ -1,8 +1,17 @@
-// X layer — two complementary reads (SPEC §3.3):
-// x_api  : official pay-per-use API — raw timeline + following list
+// X layer — three reads, cheapest capable source first (SPEC §3.3):
+// apify   : tweet-scraper + follower-scraper — raw data, often ~10-100×
+//           cheaper than X API pay-per-use
+// x_api   : official pay-per-use API — ToS-cleanest raw path
 // x_search: xAI Agent Tools on /v1/responses — handle-filtered semantic search
 
+import { xFollowingViaApify, xTweetsViaApify } from "./apify";
+
 export async function xTimeline(handle: string): Promise<unknown[] | null> {
+  // Cheap path first: Apify timeline (~$0.02/prospect vs ~$1 via X API).
+  if (process.env.APIFY_TOKEN) {
+    const viaApify = await xTweetsViaApify(handle);
+    if (viaApify?.length) return viaApify;
+  }
   const key = process.env.X_API_KEY;
   if (!key) return null;
   try {
@@ -25,6 +34,11 @@ export async function xTimeline(handle: string): Promise<unknown[] | null> {
 }
 
 export async function xFollowing(handle: string): Promise<unknown[] | null> {
+  // Cheap path first: ~$0.15/1k follows via Apify vs $10/1k via X API.
+  if (process.env.APIFY_TOKEN) {
+    const viaApify = await xFollowingViaApify(handle);
+    if (viaApify?.length) return viaApify;
+  }
   const key = process.env.X_API_KEY;
   if (!key) return null;
   try {

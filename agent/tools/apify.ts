@@ -10,6 +10,10 @@ const ACTORS = {
   postComments: "harvestapi~linkedin-post-comments",
   postSearch: "harvestapi~linkedin-post-search",
   companyEmployees: "harvestapi~linkedin-company-employees",
+  // X via Apify — often much cheaper than X API pay-per-use:
+  // timelines ~$0.40/1k tweets vs $5/1k; follows ~$0.15/1k vs $10/1k.
+  xTweets: "apidojo~tweet-scraper",
+  xFollowing: "xquik~x-follower-scraper",
 } as const;
 
 export type ActorKey = keyof typeof ACTORS;
@@ -46,6 +50,43 @@ export async function latestActivityDates(profileUrl: string) {
     maxItems: 5,
   });
   return items?.map((i) => i.postedAt).filter(Boolean) ?? null;
+}
+
+// X timeline via Apify (cheap path). Tolerant input: tweet-scraper accepts
+// handles + search terms; we send both spellings seen in its schema history.
+export async function xTweetsViaApify(handle: string, max = 50) {
+  const clean = handle.replace(/^@/, "");
+  const items = await runActor<Record<string, unknown>>("xTweets", {
+    twitterHandles: [clean],
+    searchTerms: [`from:${clean}`],
+    maxItems: Math.max(max, 50), // actor bills a 50-tweet minimum per query
+    sort: "Latest",
+  });
+  return (
+    items?.map((t) => ({
+      text: (t.text ?? t.full_text ?? "") as string,
+      created_at: (t.createdAt ?? t.created_at ?? "") as string,
+      url: (t.url ?? t.twitterUrl ?? "") as string,
+    })) ?? null
+  );
+}
+
+// X following list via Apify (~100× cheaper than X API for follows).
+export async function xFollowingViaApify(handle: string, max = 500) {
+  const clean = handle.replace(/^@/, "");
+  const items = await runActor<Record<string, unknown>>("xFollowing", {
+    startUrls: [`https://x.com/${clean}/following`],
+    profiles: [clean],
+    mode: "following",
+    maxItems: max,
+  });
+  return (
+    items?.map((u) => ({
+      handle: (u.userName ?? u.username ?? u.screen_name ?? "") as string,
+      name: (u.name ?? u.fullName ?? "") as string,
+      bio: (u.description ?? u.bio ?? "") as string,
+    })) ?? null
+  );
 }
 
 // Radar: who engaged with OUR post.
