@@ -38,7 +38,7 @@ export default function Plan() {
   return (
     <div className="space-y-7">
       <div>
-        <h1 className="text-[26px] font-semibold tracking-tight">content generation</h1>
+        <h1 className="text-[26px] font-semibold tracking-tight">generate gravity</h1>
         <p className="mono label mt-1">
           react → comment → follow → connect → outreach · the familiarity ladder
         </p>

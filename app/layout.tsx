@@ -22,9 +22,9 @@ export const metadata: Metadata = {
 };
 
 const NAV = [
-  { href: "/board", label: "map buyers" },
-  { href: "/plan", label: "generate gravity" },
-  { href: "/warm", label: "track engagement" },
+  { href: "/board", label: "pipeline" },
+  { href: "/plan", label: "plan" },
+  { href: "/warm", label: "warm queue" },
 ];
 
 export default function RootLayout({

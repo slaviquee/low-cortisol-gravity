@@ -43,7 +43,7 @@ export default function Warm() {
       >
         <div className="relative z-10 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h1 className="text-[26px] font-bold tracking-tight">engagement tracking</h1>
+            <h1 className="text-[26px] font-bold tracking-tight">track engagement</h1>
             <p className="mt-1 text-[12.5px] text-white/85">
               1 comment or 2 reactions from a target → warm → the email is no longer cold
             </p>
