@@ -425,6 +425,48 @@ async function warmFlow(prospectId: string, quote?: string) {
   void draftPitchBrief(card.id); // brief is ready before any call or email
 }
 
+// Cohorts are hypotheses, not labels: every learning cycle re-checks fit.
+// A buyer who stayed silent while cohorts performed gets re-seated toward
+// where the data points — until they find their place.
+async function reclusterCohorts(): Promise<string[]> {
+  const moved: string[] = [];
+  await updateState((s) => {
+    const content = s.cohorts.filter((c) => c.id !== "quiet-execs");
+    if (!content.length) return;
+    const best = [...content].sort((a, b) => b.engagements - a.engagements)[0];
+    if (best.engagements < 3) return; // not enough signal to re-seat anyone
+    s.cohorts.forEach((c) => (c.recent_moves = []));
+    for (const p of s.prospects) {
+      if (p.state === "low_orbit") continue;
+      const home = content.find((c) => c.members.includes(p.id));
+      if (!home || home.id === best.id) continue;
+      const silent = p.engagement_events.length === 0;
+      const homeIsCold = home.engagements === 0;
+      if (silent && homeIsCold) {
+        home.members = home.members.filter((m) => m !== p.id);
+        best.members.push(p.id);
+        best.recent_moves!.push(p.id);
+        moved.push(p.prospect.name);
+        s.log.push({
+          at: new Date().toISOString(),
+          agent: "strategist",
+          msg: `re-seated ${p.prospect.name}: ${home.name} never landed with her (0 for 0) — testing ${best.name} next`,
+        });
+      }
+    }
+  });
+  if (moved.length) {
+    await updateBrain((b) => {
+      learn(
+        b,
+        "strategist",
+        `cohort re-fit: ${moved.join(", ")} moved — silence is data too; cohorts update until every buyer sits where they engage`
+      );
+    });
+  }
+  return moved;
+}
+
 // The 5↔6 loop: Radar measured → Strategist re-plans, doubling down on what
 // hit. Real mode: think('strategist', …) over engagement; mock: v2 fixtures.
 export async function replanFromEngagement(): Promise<number> {
@@ -434,6 +476,9 @@ export async function replanFromEngagement(): Promise<number> {
     0
   );
   if (engaged === 0) return 0;
+
+  // Learning step 1: do the cohorts themselves still fit the data?
+  const moved = await reclusterCohorts();
   const fresh = fixturePlanV2().filter(
     (item) => !s.plan.some((p) => p.id === item.id)
   );
@@ -459,7 +504,7 @@ export async function replanFromEngagement(): Promise<number> {
     const c = st.crew.find((c) => c.agent === "strategist");
     if (c) {
       c.status = "done";
-      c.note = `plan v2: +${fresh.length} actions, doubled down on what hit`;
+      c.note = `plan v2: +${fresh.length} actions${moved.length ? ` · ${moved.length} buyer${moved.length === 1 ? "" : "s"} re-seated` : ""} — doubled down on what hit`;
     }
     st.log.push({
       at: new Date().toISOString(),

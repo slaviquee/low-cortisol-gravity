@@ -18,8 +18,9 @@ your website + target accounts
 Scout      reads your site → ICP → pushes persona + accounts into Sillage
 Resolver   names the buyers (Sillage mappings + FullEnrich search) · heat triage
 Listener   scrapes each hot prospect's public footprint → Buyer World Models
-Strategist Gravity Map → 5-day plan: posts · comments · micro-actions
-Radar      watches YOUR posts → warm trigger → just-in-time enrichment → the touch
+Strategist Gravity Map → taste cohorts → 5-day plan, one cohort per action
+Radar      watches YOUR posts → per-cohort attribution → warm trigger →
+           just-in-time enrichment → the touch
 ```
 
 The magic moment: *"This VP Sales commented on your Tuesday post. Here's her
@@ -53,7 +54,12 @@ The agent layer follows Anthropic's **goals → loops → evals** pattern: each
 agent has an explicit goal + self-eval rubric in its prompt; create↔measure
 is a standing loop (`↻ regenerate from engagement`); every draft passes an
 eval gate (their format · our voice · evidence · zero slop) with bounded
-auto-revision. The **Company Brain** (`/brain`) persists across runs —
+auto-revision. Buyers cluster into **taste cohorts** (chart skeptics,
+systems thinkers, quiet execs) — every action targets a cohort, not a
+person; engagement is scored per cohort; and the cohorts themselves learn:
+a buyer who never reacts gets re-seated each cycle until they sit where
+they engage. Serendipitous engagers join the cohort whose content pulled
+them in. The **Company Brain** (`/brain`) persists across runs —
 narrative, ICP, tone of voice from your own posts, content performance,
 your steering notes, decisions-with-reasons — and every generation reads it.
 

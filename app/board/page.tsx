@@ -168,6 +168,11 @@ export default function Pipeline() {
                     <span className="label ml-1" style={{ fontSize: 10.5 }}>
                       {c.members.length} buyer{c.members.length === 1 ? "" : "s"}
                     </span>
+                    {(c.recent_moves?.length ?? 0) > 0 && (
+                      <span className="mono ml-auto text-[10px] text-[var(--accent)]">
+                        ↩ {c.recent_moves!.length} re-seated
+                      </span>
+                    )}
                   </div>
                   <div className="mt-2.5 h-[3px] w-full overflow-hidden rounded-full bg-[var(--card-deep)]">
                     <div

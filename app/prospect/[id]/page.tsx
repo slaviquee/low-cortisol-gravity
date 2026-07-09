@@ -55,11 +55,14 @@ export default function Prospect({
         <div className="flex items-center gap-4">
           {(() => {
             const cohort = state.cohorts.find((c) => c.members.includes(p.id));
-            return cohort ? (
+            if (!cohort) return null;
+            const reseated = cohort.recent_moves?.includes(p.id);
+            return (
               <span className="card-paper px-2.5 py-1 text-[11px] text-[var(--muted)]">
                 cohort · {cohort.name}
+                {reseated && <span className="text-[var(--accent)]"> · ↩ re-seated</span>}
               </span>
-            ) : null;
+            );
           })()}
           <HeatBar heat={p.heat} />
           <StateChip state={p.state} />

@@ -100,6 +100,7 @@ export interface Cohort {
   members: string[]; // prospect ids (serendipity engagers join too)
   engagements: number;
   warm: number;
+  recent_moves?: string[]; // members re-seated here in the last learning cycle
 }
 
 export interface GravityMapTheme {

@@ -150,7 +150,11 @@ function SceneLoop() {
       <p className="rise mono mt-3 text-[11.5px] text-[var(--muted)]" style={{ animationDelay: "620ms" }}>
         propose → execute → measure → regenerate ↻
       </p>
-      <Line delay={850} green>
+      <Line delay={850}>
+        cohorts update too: a buyer who never reacts gets re-seated until
+        they find their place
+      </Line>
+      <Line delay={1100} green>
         → next week&apos;s plan shifts effort to the cohorts that convert
       </Line>
     </div>
