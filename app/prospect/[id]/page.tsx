@@ -24,27 +24,31 @@ export default function Prospect({
   if (!p)
     return (
       <p className="label">
-        unknown prospect — <Link href="/board" className="underline">back to board</Link>
+        unknown prospect — <Link href="/board" className="link-green">→ back to board</Link>
       </p>
     );
 
   return (
-    <div className="rise space-y-6">
-      <Link href="/board" className="label hover:text-[var(--amber)]">
+    <div className="rise space-y-5">
+      <Link href="/board" className="link-green">
         ← board
       </Link>
 
-      <div className="panel flex flex-wrap items-center justify-between gap-4 p-5">
+      <div className="card flex flex-wrap items-center justify-between gap-4 p-5">
         <div className="flex items-center gap-4">
           <ScoreRing score={p.gravity_score} size={56} />
           <div>
-            <h1 className="font-display text-3xl">{p.prospect.name}</h1>
-            <p className="label mt-1 normal-case tracking-normal">
+            <h1 className="text-[24px] font-semibold tracking-tight">
+              {p.prospect.name}
+            </h1>
+            <p className="label mt-0.5">
               {p.prospect.title} @ {p.prospect.company} ·{" "}
-              <a href={p.prospect.linkedin_url} className="text-[var(--cyan)] underline decoration-dotted" target="_blank" rel="noreferrer">
+              <a href={p.prospect.linkedin_url} className="link-green" target="_blank" rel="noreferrer">
                 linkedin
               </a>
-              {p.prospect.x_handle && <> · {p.prospect.x_handle}</>}
+              {p.prospect.x_handle && (
+                <span className="mono"> · {p.prospect.x_handle}</span>
+              )}
             </p>
           </div>
         </div>
@@ -55,76 +59,72 @@ export default function Prospect({
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <section className="panel p-4">
-          <p className="label mb-3" style={{ color: "var(--amber)" }}>
-            topics & stances
-          </p>
-          {p.topics.length === 0 && <p className="label normal-case">listener still reading…</p>}
-          <ul className="space-y-3">
+        <section className="card p-4.5 p-5">
+          <p className="label mb-3.5">topics & stances</p>
+          {p.topics.length === 0 && <p className="label">listener still reading…</p>}
+          <ul className="space-y-4">
             {p.topics.map((t, i) => (
-              <li key={i} className="border-l-2 border-[var(--line-bright)] pl-3">
-                <p className="text-[13px] font-semibold">{t.topic}</p>
-                <p className="mt-0.5 text-xs leading-relaxed text-[var(--muted)]">
+              <li key={i} className="card-paper p-3.5">
+                <p className="text-[13.5px] font-semibold">{t.topic}</p>
+                <p className="mt-1 text-[12.5px] leading-relaxed text-[var(--muted)]">
                   {t.stance}
                 </p>
-                <Evidence urls={t.evidence} />
+                <div className="mt-1.5">
+                  <Evidence urls={t.evidence} />
+                </div>
               </li>
             ))}
           </ul>
         </section>
 
         <div className="space-y-4">
-          <section className="panel p-4">
-            <p className="label mb-3" style={{ color: "var(--cyan)" }}>
-              their orbit — influencers
-            </p>
-            <ul className="space-y-3">
+          <section className="card p-5">
+            <p className="label mb-3.5">their orbit — influencers</p>
+            <ul className="space-y-3.5">
               {p.influencers.map((inf, i) => (
                 <li key={i}>
-                  <p className="text-[13px] font-semibold">{inf.name}</p>
-                  <p className="mt-0.5 text-xs text-[var(--muted)]">{inf.why}</p>
+                  <p className="text-[13.5px] font-semibold">{inf.name}</p>
+                  <p className="mt-0.5 text-[12.5px] text-[var(--muted)]">{inf.why}</p>
                   <Evidence urls={inf.evidence} />
                 </li>
               ))}
-              {p.influencers.length === 0 && (
-                <p className="label normal-case">—</p>
-              )}
+              {p.influencers.length === 0 && <p className="label">—</p>}
             </ul>
           </section>
 
-          <section className="panel p-4">
+          <section className="card p-5">
             <p className="label mb-3">rewards · behavior · signals</p>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               {p.formats.map((f) => (
-                <span key={f} className="chip" style={{ color: "var(--text)" }}>
+                <span key={f} className="card-paper px-2.5 py-1 text-[11.5px]">
                   {f.replaceAll("_", " ")}
                 </span>
               ))}
-              <span className="chip" style={{ color: "var(--cyan)", borderColor: "var(--cyan)" }}>
+              <span className="card-paper px-2.5 py-1 text-[11.5px] font-medium text-[var(--accent)]">
                 {p.behavior}
               </span>
             </div>
-            <ul className="mt-3 space-y-1.5">
+            <ul className="mt-3.5 space-y-1.5">
               {p.signals.map((s, i) => (
-                <li key={i} className="text-xs" style={{ color: "var(--amber)" }}>
-                  ⚡ {s.detail}
-                  <span className="label ml-2">sillage · {s.type}</span>
+                <li key={i} className="text-[12.5px]">
+                  <span className="link-green">→ {s.detail}</span>
+                  <span className="label mono ml-2" style={{ fontSize: 10.5 }}>
+                    sillage · {s.type}
+                  </span>
                 </li>
               ))}
             </ul>
           </section>
 
-          <section className="panel p-4">
-            <p className="label mb-2" style={{ color: "var(--green)" }}>
-              contact — bought just-in-time
-            </p>
+          <section className="card-dark p-5">
+            <p className="text-[12.5px] text-white/60">contact — bought just-in-time</p>
             {p.contact.emails.length ? (
-              <p className="text-[13px]">
+              <p className="mono mt-2 text-[13px]">
                 ✉ {p.contact.emails[0]}
                 {p.contact.phones[0] && <> · ☎ {p.contact.phones[0]}</>}
               </p>
             ) : (
-              <p className="label normal-case">
+              <p className="mt-2 text-[12.5px] text-white/50">
                 not purchased yet — fires at the warm trigger
               </p>
             )}
@@ -133,17 +133,15 @@ export default function Prospect({
       </div>
 
       {p.engagement_events.length > 0 && (
-        <section className="panel p-4">
-          <p className="label mb-3" style={{ color: "var(--green)" }}>
-            engagement with your content
-          </p>
+        <section className="card p-5">
+          <p className="label mb-3">engagement with your content</p>
           <ul className="space-y-2">
             {p.engagement_events.map((e, i) => (
-              <li key={i} className="text-xs">
-                <span style={{ color: "var(--green)" }}>
+              <li key={i} className="text-[12.5px]">
+                <span className="font-medium text-[var(--accent)]">
                   {e.kind === "comment" ? "💬" : "▲"} {e.kind}
                 </span>{" "}
-                on <span className="text-[var(--cyan)]">{e.post_id}</span>
+                on <span className="mono">{e.post_id}</span>
                 {e.quote && <span className="text-[var(--muted)]"> — “{e.quote}”</span>}
               </li>
             ))}

@@ -3,7 +3,7 @@
 // WARM QUEUE — the loop closes: engagement → JIT enrichment → the touch.
 
 import { useState } from "react";
-import { CopyBtn, usePolledState } from "@/components/ui";
+import { CopyBtn, usePolledState, warmthScore } from "@/components/ui";
 
 export default function Warm() {
   const state = usePolledState(1000);
@@ -11,6 +11,7 @@ export default function Warm() {
   const [lastScan, setLastScan] = useState("");
 
   if (!state) return <p className="label">connecting…</p>;
+  const warmth = warmthScore(state.prospects);
 
   async function scan() {
     setScanning(true);
@@ -32,28 +33,32 @@ export default function Warm() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl">Warm queue</h1>
-          <p className="label mt-1">
-            1 comment or 2 reactions from a target → warm → the email is no
-            longer cold
-          </p>
+    <div className="space-y-5">
+      <div className="gradient-warm rise p-6">
+        <div className="relative z-10 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="text-[26px] font-bold tracking-tight">engagement tracking</h1>
+            <p className="mt-1 text-[12.5px] text-white/85">
+              1 comment or 2 reactions from a target → warm → the email is no longer cold
+            </p>
+          </div>
+          <div className="flex items-center gap-5">
+            <p className="mono text-[22px] font-medium">
+              {warmth.toFixed(1)} <span className="text-white/70">/ 100</span>
+            </p>
+            <button className="btn btn-onGradient" onClick={scan} disabled={scanning}>
+              {scanning ? "scanning…" : "→ scan engagement"}
+            </button>
+          </div>
         </div>
-        <button className="btn" onClick={scan} disabled={scanning}>
-          {scanning ? "scanning…" : "◉ scan engagement"}
-        </button>
       </div>
 
       {lastScan && (
-        <p className="rise text-xs" style={{ color: "var(--green)" }}>
-          radar · {lastScan}
-        </p>
+        <p className="rise link-green text-[12.5px]">→ radar · {lastScan}</p>
       )}
 
       {state.warm.length === 0 && (
-        <div className="panel p-8 text-center">
+        <div className="card p-10 text-center">
           <p className="label">
             no warm prospects yet — publish the plan, then scan engagement
           </p>
@@ -64,32 +69,27 @@ export default function Warm() {
         {state.warm.map((w) => (
           <div
             key={w.id}
-            className={`panel rise p-4 ${w.sent ? "opacity-45" : "warm-glow"}`}
+            className={`card rise p-5 ${w.sent ? "opacity-45" : "warm-edge"}`}
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-[15px] font-semibold">
+                <p className="flex items-center gap-2.5 text-[15px] font-semibold tracking-tight">
                   {w.name}
                   {w.serendipity && (
-                    <span
-                      className="chip ml-2"
-                      style={{ borderColor: "var(--violet)", color: "var(--violet)" }}
-                    >
+                    <span className="card-paper px-2.5 py-0.5 text-[10.5px] font-medium text-[var(--accent)]">
                       serendipity — never prospected
                     </span>
                   )}
                 </p>
-                <p className="label mt-0.5 normal-case tracking-normal">
-                  {w.title}
-                </p>
+                <p className="label mt-0.5">{w.title}</p>
               </div>
               <div className="text-right">
                 {w.enriching ? (
-                  <p className="pulse text-xs" style={{ color: "var(--amber)" }}>
+                  <p className="pulse mono text-[12px] text-[var(--muted)]">
                     fullenrich · verifying contact…
                   </p>
                 ) : (
-                  <p className="text-xs" style={{ color: "var(--green)" }}>
+                  <p className="mono text-[12px]">
                     ✉ {w.email || "—"}
                     {w.phone && <> · ☎ {w.phone}</>}
                   </p>
@@ -97,26 +97,22 @@ export default function Warm() {
               </div>
             </div>
 
-            <p className="mt-3 border-l-2 border-[var(--green)] pl-3 text-[13px] italic text-[#c6d3d8]">
-              {w.event.kind === "comment"
-                ? `“${w.event.quote}”`
-                : "reacted to your post"}
+            <p className="mt-3.5 border-l-2 border-[var(--accent)] pl-3 text-[13.5px] italic text-[#4a4a45]">
+              {w.event.kind === "comment" ? `“${w.event.quote}”` : "reacted to your post"}
             </p>
 
             {!w.enriching && w.email_draft && (
               <>
-                <pre className="draft mt-3">{w.email_draft}</pre>
+                <pre className="draft mt-3.5">{w.email_draft}</pre>
                 {w.connect_note && (
-                  <p className="mt-2 text-xs text-[var(--muted)]">
-                    <span style={{ color: "var(--cyan)" }}>⊕ connect note · </span>
+                  <p className="mt-2.5 text-[12px] text-[var(--muted)]">
+                    <span className="link-green">→ connect note · </span>
                     {w.connect_note}
                   </p>
                 )}
-                <div className="mt-3 flex gap-2">
+                <div className="mt-3.5 flex gap-2">
                   <CopyBtn text={w.email_draft} label="copy email" />
-                  {w.connect_note && (
-                    <CopyBtn text={w.connect_note} label="copy note" />
-                  )}
+                  {w.connect_note && <CopyBtn text={w.connect_note} label="copy note" />}
                   {!w.sent && (
                     <button className="btn" onClick={() => markSent(w.id)}>
                       mark sent →
@@ -130,16 +126,13 @@ export default function Warm() {
       </div>
 
       {state.log.length > 0 && (
-        <div className="panel p-4">
-          <p className="label mb-2">radar log</p>
-          <ul className="space-y-1">
+        <div className="card p-5">
+          <p className="label mb-2.5">radar log</p>
+          <ul className="space-y-1.5">
             {[...state.log].reverse().slice(0, 8).map((l, i) => (
-              <li key={i} className="text-[11px] text-[var(--muted)]">
-                <span className="text-[var(--dim)]">
-                  {l.at.slice(11, 19)}
-                </span>{" "}
-                <span style={{ color: "var(--cyan)" }}>{l.agent}</span> ·{" "}
-                {l.msg}
+              <li key={i} className="mono text-[11.5px] text-[var(--muted)]">
+                <span className="text-[var(--faint)]">{l.at.slice(11, 19)}</span>{" "}
+                <span className="text-[var(--accent)]">{l.agent}</span> · {l.msg}
               </li>
             ))}
           </ul>

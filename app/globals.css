@@ -1,19 +1,16 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #0a0e12;
-  --panel: #101820;
-  --panel-2: #0d141a;
-  --line: #1c2830;
-  --line-bright: #2c3f4b;
-  --text: #d9e3e7;
-  --muted: #74888f;
-  --dim: #45565d;
-  --amber: #ffb454;
-  --green: #3ddc97;
-  --cyan: #56b6c2;
-  --violet: #b48cff;
-  --red: #e06c75;
+  --bg: #efeeec;
+  --card: #e6e5e1;
+  --card-deep: #dcdbd6;
+  --paper: #f8f8f6;
+  --ink: #1b1b19;
+  --muted: #8a8a84;
+  --faint: #c9c8c2;
+  --accent: #0ba84f;
+  --yellow: #ddb02c;
+  --charcoal: #292926;
 }
 
 html {
@@ -22,114 +19,162 @@ html {
 
 body {
   background: var(--bg);
-  color: var(--text);
-  font-family: var(--font-mono), ui-monospace, monospace;
+  color: var(--ink);
+  font-family: var(--font-sans), system-ui, sans-serif;
   font-size: 14px;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.006em;
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* faint starfield */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background-image:
-    radial-gradient(1px 1px at 12% 24%, rgba(217, 227, 231, 0.16) 0, transparent 100%),
-    radial-gradient(1px 1px at 68% 8%, rgba(217, 227, 231, 0.12) 0, transparent 100%),
-    radial-gradient(1px 1px at 84% 52%, rgba(217, 227, 231, 0.1) 0, transparent 100%),
-    radial-gradient(1.5px 1.5px at 32% 76%, rgba(255, 180, 84, 0.1) 0, transparent 100%),
-    radial-gradient(1px 1px at 92% 88%, rgba(217, 227, 231, 0.12) 0, transparent 100%),
-    radial-gradient(1px 1px at 45% 45%, rgba(86, 182, 194, 0.1) 0, transparent 100%);
-  z-index: 0;
+.mono {
+  font-family: var(--font-mono), ui-monospace, monospace;
 }
 
-.font-display {
-  font-family: var(--font-display), georgia, serif;
+/* lowercase editorial labels — like the reference */
+.label {
+  font-size: 12.5px;
+  color: var(--muted);
+  text-transform: lowercase;
 }
 
-/* ── panels & primitives ─────────────────────────────── */
+/* ── surfaces ────────────────────────────────────────── */
 
-.panel {
-  background: linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
-  border: 1px solid var(--line);
+.card {
+  background: var(--card);
+  border-radius: 12px;
+  transition: background 140ms;
+}
+
+a.card:hover {
+  background: var(--card-deep);
+}
+
+.card-paper {
+  background: var(--paper);
   border-radius: 10px;
 }
 
-.panel:hover {
-  border-color: var(--line-bright);
+.card-dark {
+  background: #292926;
+  color: #f2f2ef;
+  border-radius: 12px;
 }
 
-.label {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  color: var(--muted);
+/* the statement piece — soft warm gradient mesh */
+.gradient-warm {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  color: #fff;
+  background:
+    radial-gradient(110% 85% at 18% 8%, rgba(255, 196, 94, 0.95) 0%, rgba(255, 196, 94, 0) 62%),
+    radial-gradient(95% 75% at 88% 22%, rgba(255, 224, 102, 0.9) 0%, rgba(255, 224, 102, 0) 58%),
+    radial-gradient(130% 95% at 62% 100%, rgba(255, 120, 138, 0.95) 0%, rgba(255, 120, 138, 0) 68%),
+    linear-gradient(165deg, #ffb35c 0%, #ffd166 42%, #ff8f7d 100%);
 }
+
+.gradient-warm::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.35;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+}
+
+/* ── controls ────────────────────────────────────────── */
 
 .btn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid var(--line-bright);
-  border-radius: 8px;
-  padding: 8px 14px;
-  font-size: 12px;
-  letter-spacing: 0.06em;
-  color: var(--text);
-  background: var(--panel);
+  background: #292926;
+  color: #f6f6f3;
+  border-radius: 9px;
+  padding: 9px 16px;
+  font-size: 13px;
   cursor: pointer;
-  transition: border-color 120ms, background 120ms, transform 120ms;
+  transition: background 140ms, transform 120ms;
 }
 
 .btn:hover {
-  border-color: var(--amber);
-  background: #131d26;
+  background: #3a3a36;
 }
 
 .btn:active {
   transform: translateY(1px);
 }
 
-.btn-primary {
-  border-color: var(--amber);
-  color: #0a0e12;
-  background: var(--amber);
-  font-weight: 600;
+.btn-ghost {
+  background: transparent;
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--faint);
 }
 
-.btn-primary:hover {
-  background: #ffc271;
-  border-color: #ffc271;
+.btn-ghost:hover {
+  background: var(--card-deep);
+}
+
+.btn-onGradient {
+  background: rgba(20, 20, 18, 0.85);
+}
+
+.link-green {
+  color: var(--accent);
+  font-size: 13px;
+  cursor: pointer;
+  transition: opacity 120ms;
+}
+
+.link-green:hover {
+  opacity: 0.7;
 }
 
 .input {
   width: 100%;
-  background: #0b1117;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 10px 12px;
-  font-size: 13px;
-  color: var(--text);
+  background: var(--paper);
+  border: none;
+  border-radius: 9px;
+  padding: 11px 13px;
+  font-size: 13.5px;
+  color: var(--ink);
   outline: none;
-  transition: border-color 120ms;
+  box-shadow: inset 0 0 0 1px transparent;
+  transition: box-shadow 140ms;
 }
 
 .input:focus {
-  border-color: var(--cyan);
+  box-shadow: inset 0 0 0 1.5px var(--accent);
 }
 
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  border: 1px solid var(--line-bright);
+.input::placeholder {
+  color: var(--faint);
+}
+
+/* status dot */
+.dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
   border-radius: 99px;
-  padding: 3px 9px;
+}
+
+/* warm card left gradient edge */
+.warm-edge {
+  position: relative;
+}
+
+.warm-edge::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  border-radius: 12px 0 0 12px;
+  background: linear-gradient(180deg, #ffb35c, #ff8f7d);
 }
 
 /* ── motion ──────────────────────────────────────────── */
@@ -137,7 +182,7 @@ body::before {
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -146,7 +191,7 @@ body::before {
 }
 
 .rise {
-  animation: rise 480ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation: rise 460ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
 @keyframes pulse-dot {
@@ -155,7 +200,7 @@ body::before {
     opacity: 1;
   }
   50% {
-    opacity: 0.25;
+    opacity: 0.3;
   }
 }
 
@@ -163,50 +208,30 @@ body::before {
   animation: pulse-dot 1.2s ease-in-out infinite;
 }
 
-@keyframes orbit-spin {
-  to {
-    transform: rotate(360deg);
+@keyframes needle-sweep {
+  0% {
+    transform: rotate(-52deg);
   }
-}
-
-.orbit-slow {
-  animation: orbit-spin 24s linear infinite;
-}
-
-.orbit-mid {
-  animation: orbit-spin 14s linear infinite reverse;
-}
-
-.orbit-fast {
-  animation: orbit-spin 8s linear infinite;
-}
-
-@keyframes warm-glow {
-  0%,
   100% {
-    box-shadow: 0 0 0 0 rgba(61, 220, 151, 0.18);
-  }
-  50% {
-    box-shadow: 0 0 24px 2px rgba(61, 220, 151, 0.22);
+    transform: rotate(52deg);
   }
 }
 
-.warm-glow {
-  animation: warm-glow 2.4s ease-in-out infinite;
-  border-color: rgba(61, 220, 151, 0.45) !important;
+.needle-live {
+  animation: needle-sweep 5.5s ease-in-out infinite alternate;
 }
 
 ::selection {
-  background: rgba(255, 180, 84, 0.3);
+  background: rgba(11, 168, 79, 0.22);
 }
 
 pre.draft {
   white-space: pre-wrap;
-  background: #0b1117;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 12px;
+  background: var(--paper);
+  border-radius: 9px;
+  padding: 13px 14px;
+  font-family: var(--font-mono), ui-monospace, monospace;
   font-size: 12.5px;
-  line-height: 1.6;
-  color: #c6d3d8;
+  line-height: 1.65;
+  color: #33332f;
 }

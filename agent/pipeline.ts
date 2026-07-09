@@ -275,8 +275,14 @@ async function draftOutreach(
       return { email: email?.trim() ?? text, note: note?.trim() ?? "" };
     }
   }
+  const hook = quote
+    ? `your comment on yesterday's post ("${quote.slice(0, 60)}…")`
+    : "your reaction to yesterday's post";
+  const noteHook = quote
+    ? "the QA gap you called out"
+    : "exactly the QA gap from that post";
   return {
-    email: `Subject: the QA gap\n\nHi ${first} — your comment on yesterday's post ("${quote?.slice(0, 60)}…") matches what we measured across 40 teams: everyone automated the sending, nobody automated the checking. That gap is exactly what we work on. Worth 20 minutes next week to compare notes on what you're seeing internally?\n\n— Alex @ Loopwell`,
-    note: `${first} — enjoyed your take on yesterday's thread. We're working on exactly the QA gap you called out. Happy to swap notes.`,
+    email: `Subject: the QA gap\n\nHi ${first} — ${hook} matches what we measured across 40 teams: everyone automated the sending, nobody automated the checking. That gap is exactly what we work on. Worth 20 minutes next week to compare notes on what you're seeing internally?\n\n— Alex @ Loopwell`,
+    note: `${first} — enjoyed your take on yesterday's thread. We're working on ${noteHook}. Happy to swap notes.`,
   };
 }

@@ -4,44 +4,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Dial } from "@/components/ui";
 import { FIXTURE_TARGETS, FIXTURE_WEBSITE } from "@/data/fixtures";
-
-function OrbitMark() {
-  return (
-    <div className="relative mx-auto h-44 w-44">
-      {[
-        { size: 176, cls: "orbit-slow", dot: "var(--dim)" },
-        { size: 124, cls: "orbit-mid", dot: "var(--cyan)" },
-        { size: 72, cls: "orbit-fast", dot: "var(--amber)" },
-      ].map((o, i) => (
-        <div
-          key={i}
-          className={`absolute rounded-full border border-[var(--line-bright)] ${o.cls}`}
-          style={{
-            width: o.size,
-            height: o.size,
-            left: `calc(50% - ${o.size / 2}px)`,
-            top: `calc(50% - ${o.size / 2}px)`,
-          }}
-        >
-          <span
-            className="absolute h-2 w-2 rounded-full"
-            style={{ background: o.dot, top: -4, left: "50%" }}
-          />
-        </div>
-      ))}
-      <span
-        className="absolute h-3 w-3 rounded-full"
-        style={{
-          background: "var(--green)",
-          left: "calc(50% - 6px)",
-          top: "calc(50% - 6px)",
-          boxShadow: "0 0 18px 2px rgba(61,220,151,.45)",
-        }}
-      />
-    </div>
-  );
-}
 
 export default function Start() {
   const router = useRouter();
@@ -83,18 +47,19 @@ export default function Start() {
   }
 
   return (
-    <div className="rise mx-auto max-w-xl pt-6">
-      <OrbitMark />
-      <h1 className="font-display mt-8 text-center text-4xl leading-tight">
-        Your buyers discover <em>you</em>
+    <div className="rise mx-auto max-w-xl pt-8">
+      <Dial value={0.5} label="buyer familiarity" display="waiting for input" live />
+
+      <h1 className="mt-8 text-center text-[38px] font-semibold leading-[1.12] tracking-tight">
+        Your buyers discover you
         <br />
         before you discover them.
       </h1>
-      <p className="label mt-3 text-center">
+      <p className="mono label mt-4 text-center">
         attention → familiarity → trust → conversation → pipeline
       </p>
 
-      <div className="panel mt-10 space-y-4 p-5">
+      <div className="card mt-10 space-y-4 p-5">
         <div>
           <label className="label">your website</label>
           <input
@@ -116,24 +81,22 @@ export default function Start() {
         </div>
 
         {(summary || scouting) && (
-          <div className="rise border-l-2 border-[var(--cyan)] pl-3">
-            <p className="label" style={{ color: "var(--cyan)" }}>
-              scout
-            </p>
-            <p className="mt-1 text-[13px] leading-relaxed text-[#c6d3d8]">
+          <div className="rise card-paper p-3.5">
+            <p className="link-green text-[12px]">→ scout</p>
+            <p className="mt-1 text-[13.5px] leading-relaxed">
               {scouting ? "reading the site…" : `"${summary}"`}
             </p>
           </div>
         )}
 
         <button
-          className="btn btn-primary w-full justify-center py-3 text-sm"
+          className="btn w-full justify-center py-3 text-[13.5px]"
           onClick={build}
           disabled={launching}
         >
-          {launching ? "launching the crew…" : "⚡ build gravity"}
+          {launching ? "launching the crew…" : "→ build gravity"}
         </button>
-        <p className="label text-center normal-case tracking-normal">
+        <p className="label text-center" style={{ fontSize: 11.5 }}>
           no keys? runs on the cached demo world — nothing here waits on a
           third party
         </p>

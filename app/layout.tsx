@@ -1,32 +1,30 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, Instrument_Serif } from "next/font/google";
+import { Geist, IBM_Plex_Mono } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 
+const sans = Geist({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-sans",
+});
+
 const mono = IBM_Plex_Mono({
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  weight: ["400", "500"],
   variable: "--font-mono",
 });
 
-const display = Instrument_Serif({
-  subsets: ["latin"],
-  weight: "400",
-  style: ["normal", "italic"],
-  variable: "--font-display",
-});
-
 export const metadata: Metadata = {
-  title: "Gravity — buyer-orbit GTM agent",
+  title: "gravity — buyer-orbit gtm agent",
   description:
     "Build enough relevance that your buyers discover you before you discover them.",
 };
 
 const NAV = [
-  { href: "/", label: "START" },
-  { href: "/board", label: "BOARD" },
-  { href: "/plan", label: "PLAN" },
-  { href: "/warm", label: "WARM" },
+  { href: "/board", label: "map buyers" },
+  { href: "/plan", label: "generate gravity" },
+  { href: "/warm", label: "track engagement" },
 ];
 
 export default function RootLayout({
@@ -35,38 +33,35 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${mono.variable} ${display.variable}`}>
+    <html lang="en" className={`${sans.variable} ${mono.variable}`}>
       <body>
-        <header className="relative z-10 border-b border-[var(--line)]">
-          <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-            <Link href="/" className="flex items-baseline gap-3">
-              <span className="font-display text-2xl italic tracking-tight">
-                Gravity
+        <header>
+          <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
+            <Link href="/" className="flex items-center gap-2.5">
+              <span className="h-5 w-5 rounded-full bg-[var(--charcoal)]" />
+              <span className="text-[17px] font-bold tracking-tight">
+                gravity
               </span>
-              <span className="label hidden sm:inline">
+              <span className="label ml-1 hidden sm:inline">
                 buyer-orbit gtm agent
               </span>
             </Link>
             <nav className="flex items-center gap-6">
               {NAV.map((n) => (
-                <Link
-                  key={n.href}
-                  href={n.href}
-                  className="label transition-colors hover:text-[var(--amber)]"
-                >
-                  {n.label}
+                <Link key={n.href} href={n.href} className="group flex items-center gap-1.5 text-[13px]">
+                  <span className="text-[var(--accent)]">→</span>
+                  <span className="text-[var(--ink)] transition-opacity group-hover:opacity-60">
+                    {n.label}
+                  </span>
                 </Link>
               ))}
             </nav>
           </div>
         </header>
-        <main className="relative z-10 mx-auto max-w-6xl px-6 py-8">
-          {children}
-        </main>
-        <footer className="relative z-10 mx-auto max-w-6xl px-6 pb-8">
-          <p className="label">
-            claude · sillage · fullenrich — agentic gtm hackathon · paris
-          </p>
+        <main className="mx-auto max-w-6xl px-6 py-6">{children}</main>
+        <footer className="mx-auto flex max-w-6xl items-center justify-between px-6 pb-8 pt-4">
+          <p className="mono text-[11px] text-[var(--faint)]">v0.1.0</p>
+          <p className="label">claude · sillage · fullenrich — agentic gtm hackathon, paris</p>
         </footer>
       </body>
     </html>
