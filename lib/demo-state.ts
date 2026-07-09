@@ -86,6 +86,7 @@ function applyRadarScans(state: AppState, scans: number) {
         signals: [],
         topics: [],
         formats: ["tactical_charts"],
+        media: [{ kind: "carousel", share: 0.6 }, { kind: "image", share: 0.4 }],
         influencers: [],
         behavior: "commenter",
         gravity_score: 18,
