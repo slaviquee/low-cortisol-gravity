@@ -2,6 +2,7 @@
 
 // GRAVITY PLAN — the week, sequenced up the familiarity ladder.
 
+import { useState } from "react";
 import {
   CopyBtn,
   Evidence,
@@ -23,6 +24,9 @@ const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"] as const;
 
 export default function Plan() {
   const state = usePolledState();
+  const [reviseId, setReviseId] = useState<string | null>(null);
+  const [note, setNote] = useState("");
+  const [revising, setRevising] = useState(false);
   if (!state) return <p className="label">connecting…</p>;
 
   async function toggle(id: string, done: boolean) {
@@ -119,9 +123,39 @@ export default function Plan() {
                           title="engagement this post earned"
                         />
                       )}
+                      {item.eval && (
+                        <span
+                          className="mono text-[10.5px]"
+                          style={{
+                            color:
+                              item.eval.score >= 80
+                                ? "var(--accent)"
+                                : "var(--yellow)",
+                          }}
+                          title={item.eval.notes.join(" · ")}
+                        >
+                          eval {item.eval.score}
+                        </span>
+                      )}
+                      {item.revised && (
+                        <span className="label" style={{ fontSize: 10.5 }}>
+                          revised ✓
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       {item.draft && <CopyBtn text={item.draft} />}
+                      {item.draft && (
+                        <button
+                          className="btn btn-ghost"
+                          onClick={() => {
+                            setReviseId(reviseId === item.id ? null : item.id);
+                            setNote("");
+                          }}
+                        >
+                          ✎ revise
+                        </button>
+                      )}
                       {item.link && (
                         <a className="btn btn-ghost" href={item.link} target="_blank" rel="noreferrer">
                           open ↗
@@ -133,6 +167,44 @@ export default function Plan() {
                     </div>
                   </div>
                   {item.draft && <pre className="draft mt-3">{item.draft}</pre>}
+                  {reviseId === item.id && (
+                    <div className="rise mt-3 flex gap-2">
+                      <input
+                        className="input"
+                        placeholder="steer it — add data or direction: 'mention our 6.4% reply rate' · 'less salesy'"
+                        value={note}
+                        autoFocus
+                        onChange={(e) => setNote(e.target.value)}
+                        onKeyDown={(e) => e.key === "Escape" && setReviseId(null)}
+                      />
+                      <button
+                        className="btn"
+                        disabled={revising || !note.trim()}
+                        onClick={async () => {
+                          setRevising(true);
+                          try {
+                            await fetch("/api/revise", {
+                              method: "POST",
+                              headers: { "content-type": "application/json" },
+                              body: JSON.stringify({ id: item.id, note }),
+                            });
+                            setReviseId(null);
+                            setNote("");
+                          } finally {
+                            setRevising(false);
+                          }
+                        }}
+                      >
+                        {revising ? "revising…" : "apply →"}
+                      </button>
+                    </div>
+                  )}
+                  {item.user_note && (
+                    <p className="label mt-2" style={{ fontSize: 11 }}>
+                      <span className="link-green">→ your note · </span>
+                      {item.user_note} — remembered in the brain
+                    </p>
+                  )}
                   <p className="mt-2.5 text-[12px] leading-relaxed text-[var(--muted)]">
                     <span className="font-medium text-[var(--ink)]">why · </span>
                     {item.why} <Evidence urls={item.evidence} />

@@ -14,15 +14,18 @@ export async function POST(req: Request) {
       ? body.targets
       : FIXTURE_TARGETS;
 
+  const ownHandles: string = body.own_handles?.trim() || "";
+
   await resetState();
   await updateState((s) => {
     s.input.website = website;
     s.input.targets = targets;
+    s.input.own_handles = ownHandles;
     s.run_started_at = new Date().toISOString();
   });
 
   // Fire and forget — the UI polls /api/state and watches the crew work.
-  void runPipeline(website, targets);
+  void runPipeline(website, targets, ownHandles);
 
   return NextResponse.json({ ok: true });
 }

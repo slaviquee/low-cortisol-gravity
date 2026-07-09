@@ -49,6 +49,14 @@ machine with credentials (recommended on stage). Add keys in `.env` (see
 | `GRADIUM_API_KEY` | speech-to-text on podcast/video appearances → taste signals in the world model |
 | `XAI_API_KEY` | `x_search` — handle-filtered semantic search over X |
 
+The agent layer follows Anthropic's **goals → loops → evals** pattern: each
+agent has an explicit goal + self-eval rubric in its prompt; create↔measure
+is a standing loop (`↻ regenerate from engagement`); every draft passes an
+eval gate (their format · our voice · evidence · zero slop) with bounded
+auto-revision. The **Company Brain** (`/brain`) persists across runs —
+narrative, ICP, tone of voice from your own posts, content performance,
+your steering notes, decisions-with-reasons — and every generation reads it.
+
 Managed-crew auth: the Agent SDK picks up `ANTHROPIC_API_KEY`, or a Claude
 subscription via `claude setup-token` → put the token in
 `CLAUDE_CODE_OAUTH_TOKEN`. On a 401 (stale login), re-run `claude setup-token`

@@ -18,6 +18,7 @@ export default function Landing() {
   const router = useRouter();
   const [website, setWebsite] = useState("");
   const [targets, setTargets] = useState("");
+  const [ownHandles, setOwnHandles] = useState("");
   const [summary, setSummary] = useState("");
   const [scouting, setScouting] = useState(false);
   const [phase, setPhase] = useState<"form" | "thinking">("form");
@@ -46,6 +47,7 @@ export default function Landing() {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         website: website || FIXTURE_WEBSITE,
+        own_handles: ownHandles,
         targets: targets
           .split(/[\n,]/)
           .map((t) => t.trim())
@@ -114,12 +116,21 @@ export default function Landing() {
               />
             </div>
             <div>
-              <label className="label">target accounts · optional</label>
+              <label className="label">target accounts · hubspot pipe · optional</label>
               <textarea
                 className="input mt-1.5 h-16 resize-none"
                 placeholder={FIXTURE_TARGETS.join(", ")}
                 value={targets}
                 onChange={(e) => setTargets(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="label">your socials · tone of voice · optional</label>
+              <input
+                className="input mt-1.5"
+                placeholder="linkedin.com/in/you · @you"
+                value={ownHandles}
+                onChange={(e) => setOwnHandles(e.target.value)}
               />
             </div>
 

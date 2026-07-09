@@ -77,6 +77,9 @@ export interface PlanItem {
   link?: string; // deep link the human clicks (profile, post)
   variant?: "A" | "B";
   done: boolean;
+  eval?: { score: number; notes: string[] }; // the quality gate's verdict
+  user_note?: string; // human steering — becomes a brain learning
+  revised?: boolean;
 }
 
 export interface GravityMapTheme {
@@ -123,7 +126,12 @@ export interface LogLine {
 }
 
 export interface AppState {
-  input: { website: string; product_summary: string; targets: string[] };
+  input: {
+    website: string;
+    product_summary: string;
+    targets: string[];
+    own_handles?: string; // your socials — tone-of-voice source
+  };
   crew: CrewStatus[];
   prospects: BuyerWorldModel[];
   gravity_map: GravityMap | null;

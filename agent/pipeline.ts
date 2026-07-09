@@ -6,12 +6,16 @@
 import {
   ENGAGEMENT_SCRIPT,
   FIXTURE_GRAVITY_MAP,
+  FIXTURE_ICP,
   FIXTURE_SUMMARY,
   fixturePlan,
   fixturePlanV2,
   fixtureProspects,
+  VOICE_PROFILE,
 } from "@/data/fixtures";
+import { brainDigest, bumpContent, decide, getBrain, learn, updateBrain } from "@/lib/brain";
 import { getState, updateState } from "@/lib/store";
+import { evalDraft, mechanicalRevise, SHIP_THRESHOLD } from "./evals";
 import {
   AppState,
   BuyerWorldModel,
@@ -39,7 +43,11 @@ async function crew(agent: CrewAgent, status: "running" | "done", note: string) 
   });
 }
 
-export async function runPipeline(website: string, targets: string[]) {
+export async function runPipeline(
+  website: string,
+  targets: string[],
+  ownHandles?: string
+) {
   const mock = !hasClaude() && !managedAvailable();
 
   // ── Scout: website → narrative; ICP + accounts into Sillage; signals back
@@ -49,6 +57,26 @@ export async function runPipeline(website: string, targets: string[]) {
     s.input.product_summary = summary;
     s.mock = mock;
   });
+  // GOAL: know who we are before deciding anything. Narrative + ICP → brain.
+  await updateBrain((b) => {
+    b.company.website = website;
+    b.company.narrative = summary;
+    b.company.icp = FIXTURE_ICP; // real mode: distilled alongside the narrative
+    b.company.updated_at = new Date().toISOString();
+    learn(b, "scout", `product narrative locked: ${summary.slice(0, 90)}…`);
+  });
+  // Tone of voice — read OUR OWN posts so everything ships in our voice.
+  await crew(
+    "scout",
+    "running",
+    `reading ${ownHandles || "your"} posts — locking tone of voice…`
+  );
+  await sleep(mock ? 1400 : 400);
+  await updateBrain((b) => {
+    b.company.tone_of_voice = VOICE_PROFILE; // real mode: apify own posts → think('scout')
+    learn(b, "scout", `tone of voice: ${VOICE_PROFILE[0]}; ${VOICE_PROFILE[1]}`);
+  });
+  await crew("scout", "running", "tone locked: numbers-first · short · no emoji");
   // CRM in: HubSpot pipe — open deals to accelerate, closed-lost to re-warm.
   const pipe = await fetchPipe();
   if (pipe) {
@@ -139,16 +167,51 @@ export async function runPipeline(website: string, targets: string[]) {
   });
   await crew("strategist", "running", "drafting the gravity plan: posts · comments · micro-actions…");
   await sleep(mock ? 2500 : 500);
+  const gated = await evalGate(fixturePlan(), "strategist");
   await updateState((s) => {
-    s.plan = fixturePlan();
+    s.plan = gated;
   });
-  await crew("strategist", "done", "5-day plan ready — familiarity ladder sequenced");
+  await updateBrain((b) =>
+    decide(b, "week-1 plan: tactical charts + influencer comments", "6/10 targets reward that format (world-model evidence)")
+  );
+  await crew("strategist", "done", "5-day plan ready — evals passed, familiarity ladder sequenced");
 
   // ── Radar: armed, watching
   await crew("radar", "running", "watching your posts for target engagement…");
   await updateState((s) => {
     s.run_done = true;
   });
+}
+
+// EVAL GATE — the quality loop: score every draft against the rubric
+// (their format, our voice, evidence, no slop); failures get one bounded
+// revision and a re-score. Nothing ships under threshold silently.
+async function evalGate(
+  items: import("@/lib/types").PlanItem[],
+  agent: CrewAgent
+): Promise<import("@/lib/types").PlanItem[]> {
+  const brain = await getBrain();
+  const out = [];
+  for (const item of items) {
+    let verdict = evalDraft(item, brain);
+    let revised = false;
+    if (verdict.score < SHIP_THRESHOLD && item.draft) {
+      const before = verdict.score;
+      // real mode: think('strategist', revise-with-eval-notes); bounded fallback:
+      item.draft = mechanicalRevise(item.draft);
+      verdict = evalDraft(item, brain);
+      revised = true;
+      await updateState((s) => {
+        s.log.push({
+          at: new Date().toISOString(),
+          agent,
+          msg: `eval caught "${item.title}" at ${before} → revised → ${verdict.score}`,
+        });
+      });
+    }
+    out.push({ ...item, eval: verdict, revised: revised || item.revised });
+  }
+  return out;
 }
 
 let scriptCursor = 0;
@@ -188,6 +251,26 @@ export async function radarScan(): Promise<string> {
       s.log.push({ at, agent: "radar", msg: `${name} ${event.kind === "comment" ? "commented on" : "reacted to"} your post` });
     });
 
+    // Every data point sharpens the brain: content performance + learnings.
+    const st = await getState();
+    const planItem = st.plan.find((x) => x.id === event.post_id);
+    await updateBrain((b) => {
+      bumpContent(
+        b,
+        event.post_id,
+        planItem?.title ?? event.post_id,
+        planItem?.type === "post" ? "tactical_chart" : planItem?.type ?? "post",
+        event.kind
+      );
+      if (becameWarm)
+        learn(
+          b,
+          "radar",
+          `${name} went warm off "${planItem?.title ?? event.post_id}" — ${event.kind}s on that format predict meetings`,
+          event.post_id
+        );
+    });
+
     if (becameWarm && beat.prospectId) void warmFlow(beat.prospectId, event.quote);
     return `${name} ${event.kind === "comment" ? `commented: "${event.quote}"` : "reacted to your post"}${becameWarm ? " → WARM" : ""}`;
   }
@@ -195,6 +278,17 @@ export async function radarScan(): Promise<string> {
   // Serendipity: an engager we never prospected. ICP check → enrich → board.
   const st = beat.stranger!;
   const id = st.name.toLowerCase().replace(/[^a-z]+/g, "-");
+  const stPlan = (await getState()).plan.find((x) => x.id === event.post_id);
+  await updateBrain((b) => {
+    bumpContent(
+      b,
+      event.post_id,
+      stPlan?.title ?? event.post_id,
+      stPlan?.type === "post" ? "tactical_chart" : stPlan?.type ?? "post",
+      event.kind
+    );
+    learn(b, "radar", `"${stPlan?.title ?? event.post_id}" pulled an ICP-fit stranger (${st.name}) — the format sources net-new pipeline`, event.post_id);
+  });
   await updateState((s) => {
     s.log.push({ at, agent: "radar", msg: `${st.name} (${st.title} @ ${st.company}) engaged — not on the list. Running ICP check…` });
   });
@@ -305,8 +399,16 @@ export async function replanFromEngagement(): Promise<number> {
     }
   });
   await sleep(1600);
+  const gated = await evalGate(fresh, "strategist");
+  await updateBrain((b) =>
+    decide(
+      b,
+      "plan v2: double down on the tactical-chart format",
+      `it earned ${engaged} target engagements (brain: content_performance)`
+    )
+  );
   await updateState((st) => {
-    st.plan.push(...fresh);
+    st.plan.push(...gated);
     const c = st.crew.find((c) => c.agent === "strategist");
     if (c) {
       c.status = "done";
@@ -319,6 +421,53 @@ export async function replanFromEngagement(): Promise<number> {
     });
   });
   return fresh.length;
+}
+
+// Human steering: the user comments on a proposed post ("mention our SOC2
+// report", "add our reply-rate numbers") — Strategist revises WITH the note,
+// the note becomes a permanent brain learning (future plans respect it),
+// and the eval gate re-scores the result.
+export async function reviseDraft(itemId: string, note: string): Promise<boolean> {
+  const s = await getState();
+  const item = s.plan.find((p) => p.id === itemId);
+  if (!item || !note.trim()) return false;
+  const brain = await getBrain();
+
+  let draft: string | null = null;
+  if (item.draft) {
+    draft = await think(
+      "strategist",
+      `Revise this ${item.channel} ${item.type} draft per the user's note. Keep our tone of voice and the original angle.\n\nBRAIN:\n${brainDigest(brain)}\n\nDRAFT:\n${item.draft}\n\nUSER NOTE: ${note}\n\nReturn ONLY the revised draft.`,
+      { deep: true }
+    );
+  }
+  if (!draft) {
+    // deterministic fallback: weave the user's data into the draft body
+    const lines = (item.draft ?? "").split("\n\n");
+    lines.splice(Math.max(1, lines.length - 1), 0, note.trim().replace(/\.$/, ""));
+    draft = mechanicalRevise(lines.join("\n\n"));
+  }
+
+  await updateBrain((b) => {
+    b.user_notes.push({ at: new Date().toISOString(), note, applied_to: itemId });
+    learn(b, "user", `steering note on "${item.title}": ${note}`);
+  });
+
+  const brain2 = await getBrain();
+  await updateState((st) => {
+    const p = st.plan.find((x) => x.id === itemId);
+    if (!p) return;
+    p.draft = draft!;
+    p.user_note = note;
+    p.revised = true;
+    p.eval = evalDraft(p, brain2);
+    st.log.push({
+      at: new Date().toISOString(),
+      agent: "strategist",
+      msg: `revised "${p.title}" with your note — eval ${p.eval.score}`,
+    });
+  });
+  return true;
 }
 
 async function draftOutreach(

@@ -25,6 +25,7 @@ const NAV = [
   { href: "/board", label: "pipeline" },
   { href: "/plan", label: "plan" },
   { href: "/warm", label: "warm queue" },
+  { href: "/brain", label: "brain" },
 ];
 
 export default function RootLayout({

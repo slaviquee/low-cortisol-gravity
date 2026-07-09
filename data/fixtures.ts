@@ -13,6 +13,17 @@ export const FIXTURE_WEBSITE = "loopwell.io";
 export const FIXTURE_SUMMARY =
   "Loopwell sells outbound-QA software that scores every SDR email and call against what actually gets replies, for B2B sales teams of 10–200 reps.";
 
+// Tone of voice — learned from YOUR own posts (mock of the voice analysis).
+export const VOICE_PROFILE = [
+  "direct, numbers-first — every claim has a figure",
+  "short sentences. no emoji, no hashtags",
+  "contrarian but constructive; never dunk without data",
+  "ends posts with one open question",
+];
+
+export const FIXTURE_ICP =
+  "VP Sales / CRO / Head of RevOps at B2B companies, 10–200 reps, outbound-led";
+
 export const FIXTURE_TARGETS = [
   "aquila-systems.com",
   "bluenote.io",
@@ -335,7 +346,7 @@ export function fixturePlanV2(): PlanItem[] {
       channel: "linkedin",
       title: "v2 · Publish: the QA-gap follow-up chart",
       draft:
-        "Last week I showed why SDR productivity collapsed after generic AI.\n\nThe #1 question in the comments: \"so what does QA even look like?\"\n\nHere's the 4-step scoring loop the top-decile teams run before anything ships. Chart below — same 40-team dataset.",
+        "Last week I showed why SDR productivity collapsed after generic AI.\n\nThe #1 question in the comments: \"so what does QA even look like?\"\n\nHere's the game-changing 4-step scoring loop the top-decile teams run before anything ships. Chart below — same 40-team dataset.",
       why: "your Tuesday chart is the hottest asset in the plan — 3 target engagements incl. 2 comments. Same format, same topic, next chapter.",
       evidence: ["p-tue-post · 3 engagements"],
       variant: "A",
