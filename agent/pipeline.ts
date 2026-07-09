@@ -601,11 +601,20 @@ export async function runPipeline(
       );
     }
   }
-  await mark(
-    "listener",
-    "running",
-    "media mix analyzed: carousels lead for 2 of 3 buyers, text for one"
-  );
+  {
+    // narrate the REAL media mix — never a canned line in live mode
+    const counts = new Map<string, number>();
+    for (const p of prospects)
+      for (const m of p.media) counts.set(m.kind, (counts.get(m.kind) ?? 0) + m.share);
+    const top = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+    await mark(
+      "listener",
+      "running",
+      top
+        ? `media mix analyzed: ${top} leads across the modeled buyers`
+        : "media mix analyzed: evidence sparse — defaulting to text-first"
+    );
+  }
   await sleep(mock ? 900 : 200);
   await mark("listener", "done", `${hot.length} Buyer World Models, every claim with evidence`);
 
@@ -630,9 +639,14 @@ export async function runPipeline(
   });
   // Cluster world models into taste cohorts: one post serves a cohort,
   // not a person — and performance gets scored per cohort.
-  await mark("strategist", "running", "clustering 3 world models → 2 taste cohorts (+1 quiet)…");
-  await sleep(mock ? 1600 : 300);
   const cohorts = mock ? fixtureCohorts() : deriveCohorts(prospects);
+  const quietCohorts = cohorts.filter((c) => c.id === "quiet-execs").length;
+  await mark(
+    "strategist",
+    "running",
+    `clustering ${hot.length} world models → ${cohorts.length - quietCohorts} taste cohorts${quietCohorts ? ` (+${quietCohorts} quiet)` : ""}…`
+  );
+  await sleep(mock ? 1600 : 300);
   await updateRunState(runId, (s) => {
     s.cohorts = cohorts;
   });
@@ -1258,6 +1272,17 @@ export async function reviseDraft(itemId: string, note: string): Promise<boolean
   return true;
 }
 
+// Fixture-world check: the polished Loopwell copy belongs to the demo
+// world ONLY — live fallbacks must speak as the real company (the brain).
+async function brandVoice() {
+  const b = await getBrain();
+  return {
+    fixture: !b.company.narrative || b.company.narrative === FIXTURE_SUMMARY,
+    product: (b.company.narrative || "").split(".")[0],
+    site: b.company.website || "our team",
+  };
+}
+
 async function draftOutreach(
   name: string,
   title: string,
@@ -1265,26 +1290,39 @@ async function draftOutreach(
   model: BuyerWorldModel | null
 ): Promise<{ email: string; note: string }> {
   const first = name.split(" ")[0];
-  if (model) {
-    const text = await think(
-      "radar",
-      `Prospect: ${name}, ${title}.\nTheir engagement: "${quote}"\nWorld model: ${JSON.stringify({ topics: model.topics, formats: model.formats })}\n\nReturn the email, then '---', then the connection note. Human and casual; zero AI tells.`,
-      { deep: true }
-    );
-    if (text) {
-      const [email, note] = text.split(/\n-{3,}\n/);
-      return { email: email?.trim() ?? text, note: note?.trim() ?? "" };
-    }
+  const voice = await brandVoice();
+  // think() runs even without a world model — serendipity engagers deserve
+  // a real Claude draft too, grounded in the product narrative.
+  const context = model
+    ? `World model: ${JSON.stringify({ topics: model.topics, formats: model.formats })}`
+    : `No world model yet (serendipitous engager on our post). Product: ${voice.product}`;
+  const text = await think(
+    "radar",
+    `Prospect: ${name}, ${title}.\nTheir engagement: "${quote || "reacted to our post"}"\n${context}\n\nReturn the email, then '---', then the connection note. Human and casual; zero AI tells.`,
+    { deep: true }
+  );
+  if (text) {
+    const [email, note] = text.split(/\n-{3,}\n/);
+    return { email: email?.trim() ?? text, note: note?.trim() ?? "" };
+  }
+  if (voice.fixture) {
+    const hook = quote
+      ? `your comment on yesterday's post ("${quote.slice(0, 60)}…")`
+      : "your reaction to yesterday's post";
+    const noteHook = quote
+      ? "the QA gap you called out"
+      : "exactly the QA gap from that post";
+    return {
+      email: `Subject: the QA gap\n\nHi ${first} — ${hook} matches what we measured across 40 teams: everyone automated the sending, nobody automated the checking. That gap is what we work on. Worth 20 minutes next week to compare notes on what you're seeing internally?\n\n— Alex @ Loopwell`,
+      note: `${first} — your point on ${noteHook} stuck with me. It's the problem we work on all day. Open to swapping notes?`,
+    };
   }
   const hook = quote
-    ? `your comment on yesterday's post ("${quote.slice(0, 60)}…")`
-    : "your reaction to yesterday's post";
-  const noteHook = quote
-    ? "the QA gap you called out"
-    : "exactly the QA gap from that post";
+    ? `your comment on our post ("${quote.slice(0, 60)}…")`
+    : "your reaction to our post";
   return {
-    email: `Subject: the QA gap\n\nHi ${first} — ${hook} matches what we measured across 40 teams: everyone automated the sending, nobody automated the checking. That gap is what we work on. Worth 20 minutes next week to compare notes on what you're seeing internally?\n\n— Alex @ Loopwell`,
-    note: `${first} — your point on ${noteHook} stuck with me. It's the problem we work on all day. Open to swapping notes?`,
+    email: `Subject: your comment\n\nHi ${first} — ${hook} landed. It's the exact conversation we're in: ${voice.product.toLowerCase()}. Worth 20 minutes this week to compare notes?\n\n— ${voice.site}`,
+    note: `${first} — good point on our post. We're deep in that exact problem. Open to comparing notes?`,
   };
 }
 
@@ -1301,7 +1339,11 @@ async function draftCallScript(
     { deep: false }
   );
   if (live) return live;
-  return `Hi ${first}, quick one — I am calling because you ${quote ? `commented on the post about "${quote.slice(0, 50)}"` : "reacted to the outbound QA post"} and it maps to a pattern we are seeing in sales teams: AI increased sending, but QA stayed manual. Worth 20 minutes to compare what your team checks before messages ship?`;
+  const voice = await brandVoice();
+  if (voice.fixture) {
+    return `Hi ${first}, quick one — I am calling because you ${quote ? `commented on the post about "${quote.slice(0, 50)}"` : "reacted to the outbound QA post"} and it maps to a pattern we are seeing in sales teams: AI increased sending, but QA stayed manual. Worth 20 minutes to compare what your team checks before messages ship?`;
+  }
+  return `Hi ${first} — calling because you ${quote ? `commented on our post ("${quote.slice(0, 50)}…")` : "engaged with our post"} and a quick conversation beats a comment thread. We work on ${voice.product.toLowerCase()}. Do you have 20 minutes this week?`;
 }
 
 // Agent-8 move: a tailored pitch brief per warm lead — their words, their
@@ -1314,17 +1356,20 @@ export async function draftPitchBrief(cardId: string): Promise<string> {
   const quote = card.event.quote ?? "";
   const first = card.name.split(" ")[0];
 
-  let brief: string | null = null;
-  if (model) {
-    brief = await think(
-      "radar",
-      `Create a tailored pitch brief (a compact deck outline, 5 sections max) for ${card.name}, ${card.title}. Their engagement with us: "${quote || "reacted to our post"}". World model: ${JSON.stringify({ topics: model.topics, formats: model.formats, behavior: model.behavior })}. Product: ${s.input.product_summary}. Open on THEIR words/stance, mirror the formats they reward, end with a 20-minute working-session ask. Plain text, numbered sections. Human and casual; zero AI tells.`,
-      { deep: true }
-    );
-  }
+  const modelContext = model
+    ? `World model: ${JSON.stringify({ topics: model.topics, formats: model.formats, behavior: model.behavior })}`
+    : "No world model yet — a serendipitous engager on our post; anchor on their comment and title.";
+  let brief: string | null = await think(
+    "radar",
+    `Create a tailored pitch brief (a compact deck outline, 5 sections max) for ${card.name}, ${card.title}. Their engagement with us: "${quote || "reacted to our post"}". ${modelContext} Product: ${s.input.product_summary}. Open on THEIR words/stance, mirror the formats they reward, end with a 20-minute working-session ask. Plain text, numbered sections. Human and casual; zero AI tells.`,
+    { deep: true }
+  );
   if (!brief) {
-    const topics = model?.topics.map((t) => t.topic).join(" · ") || "outbound efficiency";
-    brief = `pitch brief — ${card.name}\n\n1 · open on their words\n    "${quote || "the QA gap in automated outbound"}"\n2 · their world\n    ${topics}\n3 · your proof (their format: numbers first)\n    12,000 emails audited — 4.1% → 2.3% reply rate without QA\n4 · the fix, in their workflow\n    score every touch before it ships; fewer, better sends\n5 · the ask\n    20-minute working session on ${first}'s own numbers\n\n→ paste into gamma.app — a per-lead deck in one click`;
+    const voice = await brandVoice();
+    const topics = model?.topics.map((t) => t.topic).join(" · ") || card.title;
+    brief = voice.fixture
+      ? `pitch brief — ${card.name}\n\n1 · open on their words\n    "${quote || "the QA gap in automated outbound"}"\n2 · their world\n    ${topics}\n3 · your proof (their format: numbers first)\n    12,000 emails audited — 4.1% → 2.3% reply rate without QA\n4 · the fix, in their workflow\n    score every touch before it ships; fewer, better sends\n5 · the ask\n    20-minute working session on ${first}'s own numbers\n\n→ paste into gamma.app — a per-lead deck in one click`
+      : `pitch brief — ${card.name}\n\n1 · open on their words\n    "${quote || "their engagement with our post"}"\n2 · their world\n    ${topics}\n3 · what we do\n    ${voice.product}\n4 · the ask\n    20-minute working session\n\n→ paste into gamma.app — a per-lead deck in one click`;
   }
   await updateState((st) => {
     const c = st.warm.find((w) => w.id === cardId);
