@@ -110,35 +110,8 @@ export function Stat({
   );
 }
 
-// Landing hero: your gravity well, with BUYERS in orbit — they warm up as
-// they spiral closer: cold gray far out, amber mid, warm green nearest.
-function BuyerMark({ color, orbit, dur, begin, retrograde = false }: {
-  color: string;
-  orbit: string;
-  dur: string;
-  begin?: string;
-  retrograde?: boolean;
-}) {
-  return (
-    <g fill={color}>
-      <circle cx="0" cy="-2.4" r="2" />
-      <path d="M -3.1 3.9 A 3.1 3.1 0 0 1 3.1 3.9 Z" />
-      <animateMotion
-        dur={dur}
-        begin={begin}
-        repeatCount="indefinite"
-        path={orbit}
-        {...(retrograde
-          ? { keyPoints: "1;0", keyTimes: "0;1", calcMode: "linear" }
-          : {})}
-      />
-    </g>
-  );
-}
-
+// Landing hero: a heavier mass, two orbits, three bodies at different periods.
 export function GravityHero() {
-  const outer = orbitPath(150, 95, 142, 82);
-  const inner = orbitPath(150, 95, 96, 54);
   return (
     <svg
       width="300"
@@ -151,12 +124,23 @@ export function GravityHero() {
       <ellipse cx="150" cy="95" rx="96" ry="54" fill="none" stroke="var(--faint)" strokeWidth="1" strokeDasharray="2 5" />
       <circle cx="150" cy="95" r="36" fill="var(--charcoal)" />
       <circle cx="150" cy="95" r="46" fill="none" stroke="rgba(27,27,25,.14)" strokeWidth="1" />
-      {/* cold buyer, far orbit */}
-      <BuyerMark color="#a3a39b" orbit={outer} dur="13s" />
-      {/* engaged buyer, drifting the other way */}
-      <BuyerMark color="#e8a13d" orbit={outer} dur="18s" begin="-8s" retrograde />
-      {/* warm buyer — closest to you */}
-      <BuyerMark color="var(--accent)" orbit={inner} dur="8.5s" begin="-3s" />
+      <circle r="3.2" fill="var(--ink)">
+        <animateMotion dur="11s" repeatCount="indefinite" path={orbitPath(150, 95, 142, 82)} />
+      </circle>
+      <circle r="2.4" fill="#8a8a84">
+        <animateMotion dur="7.5s" begin="-3s" repeatCount="indefinite" path={orbitPath(150, 95, 96, 54)} />
+      </circle>
+      <circle r="2.2" fill="#b3b3ac">
+        <animateMotion
+          dur="17s"
+          begin="-9s"
+          repeatCount="indefinite"
+          path={orbitPath(150, 95, 142, 82)}
+          keyPoints="1;0"
+          keyTimes="0;1"
+          calcMode="linear"
+        />
+      </circle>
     </svg>
   );
 }
