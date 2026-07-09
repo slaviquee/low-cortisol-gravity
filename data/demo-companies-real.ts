@@ -12,6 +12,23 @@ const BUILDGRAVITY: CompanySpec = {
   website: "buildgravity.co",
   product_summary:
     "Gravity is a buyer-orbit GTM agent that learns each buyer's taste, earns their attention inside their feed, and reaches out only once they've engaged — so the first touch is never cold.",
+  icp: "GTM leaders (Heads of Sales, CROs, founders) at AI-native and B2B-SaaS companies running relationship-led sales motions",
+  tone: [
+    "playful and human — \"I taught a computer to have a crush on your customers\"",
+    "one bold claim, then the mechanism — no corporate throat-clearing",
+    "first-person, casual, short lines, contractions",
+    "ends with a clear ask (comment 'gravity' for access)",
+  ],
+  user_notes: [
+    "always tag Anthropic, Sillage, FullEnrich and #agentic-gtm in launch posts",
+    "keep the register playful — the crush framing is the hook, don't sand it off",
+  ],
+  decisions: [
+    {
+      decision: "anchor outbound on the CMO's launch post, not a cold sequence",
+      because: "it organically pulled 10 real ICP commenters — that's warm inventory to work first",
+    },
+  ],
   targets: ["anthropic.com", "getsillage.com"],
   own_post_urls: [
     "https://www.linkedin.com/feed/update/urn:li:activity:7480977704746483712/",
@@ -28,8 +45,8 @@ const BUILDGRAVITY: CompanySpec = {
       state: "engaged",
       behavior: "poster",
       signals: [
-        { type: "hiring", detail: "Anthropic scaling the enterprise sales org fast" },
-        { type: "keyword", detail: "\"agentic momentum\" in her recent posts" },
+        { type: "keyword", detail: "headline: \"building agentic momentum @ Anthropic\"" },
+        { type: "keyword", detail: "publishes GTM hiring playbooks via 20SALES" },
       ],
       topics: [
         { topic: "agentic AI adoption in enterprise", stance: "building agentic momentum at Anthropic — bullish, pragmatic", evidence: ["https://www.linkedin.com/in/laurenhschwartz/"] },
@@ -50,7 +67,10 @@ const BUILDGRAVITY: CompanySpec = {
       score: 12,
       state: "engaged",
       behavior: "poster",
-      signals: [{ type: "competitor", detail: "posts on agentic AI in fintech/payments" }],
+      signals: [
+        { type: "keyword", detail: "reacts publicly to Anthropic product launches" },
+        { type: "keyword", detail: "posts on agentic AI in payments (ex-Stripe/Airwallex)" },
+      ],
       topics: [
         { topic: "agentic AI & future of payments", stance: "ex-Stripe/Airwallex — sees agents reshaping fintech GTM", evidence: ["https://www.linkedin.com/posts/ryanoholleran_today-anthropic-launched-powerful-new-features-activity-7317968655126835202-XR6g"] },
         { topic: "scaling enterprise sales orgs", stance: "shares hard-won org-scaling lessons", evidence: ["https://www.linkedin.com/in/ryanoholleran/"] },
@@ -70,7 +90,7 @@ const BUILDGRAVITY: CompanySpec = {
       score: 8,
       state: "modeled",
       behavior: "commenter",
-      signals: [{ type: "hiring", detail: "hiring across the UK enterprise team" }],
+      signals: [{ type: "keyword", detail: "active in UK sales-leadership networking (Essex)" }],
       topics: [
         { topic: "enterprise AI GTM in UK market", stance: "building the UK enterprise motion for Anthropic", evidence: ["https://www.linkedin.com/in/asjitteja/"] },
         { topic: "sales community & networking", stance: "active in UK sales-leadership circles", evidence: ["https://www.linkedin.com/posts/asjitteja_thankyou-networking-networkingessex-activity-6909540392346472448-Zmd7"] },
@@ -113,7 +133,10 @@ const BUILDGRAVITY: CompanySpec = {
       score: 14,
       state: "engaged",
       behavior: "poster",
-      signals: [{ type: "competitor", detail: "posts on the decline of automated outreach" }],
+      signals: [
+        { type: "funding", detail: "co-founded Sillage — ~€1.7M pre-seed (Kima Ventures)" },
+        { type: "keyword", detail: "posts: inbound is dying to LLM search" },
+      ],
       topics: [
         { topic: "intent signals & buyer behavior", stance: "job changes, competitor engagement, topic posts as the new inbound", evidence: ["https://www.linkedin.com/posts/arnaud-weiss-60b6758a_big-news-im-launching-my-third-startup-activity-7371162847550156800-0b90"] },
         { topic: "decline of inbound & outreach burnout", stance: "ex-VP Marketing (LumApps) — inbound is dying to LLM search", evidence: ["https://www.linkedin.com/posts/arnaud-weiss-60b6758a_big-news-im-launching-my-third-startup-activity-7371162847550156800-0b90"] },
@@ -196,6 +219,15 @@ const ANTHROPIC: CompanySpec = {
   website: "anthropic.com",
   product_summary:
     "Anthropic builds frontier AI (Claude) and a fast-scaling enterprise business — this world models Anthropic's own GTM leadership as the buyers a sales-tooling vendor would target.",
+  icp: "senior commercial leaders at Anthropic — CCO, Head of Sales & Partnerships, regional heads of enterprise",
+  tone: [
+    "measured and enterprise-credible — outcomes over hype",
+    "responsible adoption framed as a GTM accelerant, not a compliance checkbox",
+    "exec-altitude narratives, not tool tactics",
+  ],
+  user_notes: [
+    "never open with a tool pitch — lead with the buying-committee trust curve",
+  ],
   targets: ["anthropic.com"],
   mock: false,
   prospects: [
@@ -227,7 +259,7 @@ const ANTHROPIC: CompanySpec = {
       score: 8,
       state: "modeled",
       behavior: "poster",
-      signals: [{ type: "hiring", detail: "building out the enterprise agents program" }],
+      signals: [{ type: "keyword", detail: "leads Anthropic's enterprise agents program" }],
       topics: [
         { topic: "enterprise AI enablement", stance: "leads the enterprise agents program", evidence: ["https://www.operatorcollective.com/blog-posts/meet-anthropics-head-of-sales-partnerships-kate-earle-jensen"] },
         { topic: "cloud partnerships", stance: "Amazon/Google partnership motion", evidence: ["https://www.operatorcollective.com/blog-posts/meet-anthropics-head-of-sales-partnerships-kate-earle-jensen"] },
@@ -290,6 +322,15 @@ const SILLAGE: CompanySpec = {
   website: "getsillage.com",
   product_summary:
     "Sillage is a GTM signal engine (job changes, champion tracking, competitor & hiring intent) for enterprise sales teams — this world models its two founders as the buyers a vendor would target.",
+  icp: "technical GTM founders and early operators in the intent-signal / agentic-GTM space",
+  tone: [
+    "contrarian, data-backed market takes",
+    "short, direct, French-founder candor",
+    "\"inbound is dying / spray-and-pray is dead\" provocations",
+  ],
+  user_notes: [
+    "match their contrarian register — never use generic outbound language",
+  ],
   targets: ["getsillage.com"],
   mock: false,
   prospects: [

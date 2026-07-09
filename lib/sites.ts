@@ -12,9 +12,12 @@ import { tmpdir } from "os";
 import path from "path";
 import { AppState } from "./types";
 import { getState, setState } from "./store";
-import { buildWorld } from "@/data/demo-seeds";
+import { updateBrain } from "./brain";
+import { buildWorld, buildBrain } from "@/data/demo-seeds";
 import { MOCK_COMPANIES } from "@/data/demo-companies";
 import { REAL_COMPANIES } from "@/data/demo-companies-real";
+
+const ALL_SPECS = [...REAL_COMPANIES, ...MOCK_COMPANIES];
 
 // Mirrors the DIR logic in lib/store.ts (kept local to avoid touching it).
 const DIR = process.env.VERCEL
@@ -104,20 +107,30 @@ export async function ensureSeeded(): Promise<void> {
     } catch {
       /* not seeded yet */
     }
-    const worlds = [...REAL_COMPANIES, ...MOCK_COMPANIES].map(buildWorld);
     await Promise.all(
-      worlds.map((w) =>
-        fs.writeFile(
-          path.join(SITES_DIR, `${siteSlug(w.input.website)}.json`),
-          JSON.stringify(w, null, 2)
-        )
-      )
+      ALL_SPECS.flatMap((spec) => {
+        const s = siteSlug(spec.website);
+        return [
+          fs.writeFile(
+            path.join(SITES_DIR, `${s}.json`),
+            JSON.stringify(buildWorld(spec), null, 2)
+          ),
+          fs.writeFile(
+            path.join(SITES_DIR, `${s}.brain.json`),
+            JSON.stringify(buildBrain(spec), null, 2)
+          ),
+        ];
+      })
     );
     const active = await getState();
     if (!active.input.website) {
       const hero =
-        worlds.find((w) => w.input.website === DEFAULT_ACTIVE) ?? worlds[0];
-      if (hero) await setState(hero);
+        ALL_SPECS.find((s) => s.website === DEFAULT_ACTIVE) ?? ALL_SPECS[0];
+      if (hero) {
+        await setState(buildWorld(hero));
+        const b = buildBrain(hero);
+        await updateBrain(() => b);
+      }
     }
     await fs.writeFile(marker, new Date().toISOString());
   } catch (err) {
@@ -187,5 +200,17 @@ export async function switchSite(
 
   await archive(active); // keep the current site switchable-back
   await setState(snapshot);
+  // swap the brain to match the site (falls back to keeping the current
+  // brain if this site has no snapshot — e.g. a real user run).
+  try {
+    const brainRaw = await fs.readFile(
+      path.join(SITES_DIR, `${slug}.brain.json`),
+      "utf8"
+    );
+    const b = JSON.parse(brainRaw);
+    await updateBrain(() => b);
+  } catch {
+    /* no brain snapshot for this slug — leave the current brain */
+  }
   return { ok: true };
 }

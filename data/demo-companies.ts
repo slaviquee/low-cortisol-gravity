@@ -9,6 +9,13 @@ const NORTHWIND: CompanySpec = {
   website: "northwind-robotics.com",
   product_summary:
     "Northwind Robotics sells autonomous warehouse pick-and-pack robots that cut fulfillment labor 40%, to ops and supply-chain leaders at mid-market e-commerce and 3PL companies.",
+  icp: "VP Ops / Head of Fulfillment / COO at mid-market e-commerce and 3PL companies",
+  tone: [
+    "show the floor, not the slideware — video first",
+    "hard ROI numbers, no vendor superlatives",
+    "augment-not-replace framing (protects the team)",
+  ],
+  user_notes: ["always lead with walkout rate, not picks/hour — it's the metric ops execs actually feel"],
   targets: ["shipfast.io", "packwise.com", "orbital-logistics.com", "meridian3pl.com"],
   own_post_urls: ["https://www.linkedin.com/posts/northwind-robotics_warehouse-automation-roi"],
   mock: true,
@@ -153,6 +160,13 @@ const CADENCE: CompanySpec = {
   website: "cadencehealth.io",
   product_summary:
     "Cadence Health sells an AI clinical-documentation assistant that cuts physician charting time in half, to CMIOs and CIOs at hospital systems and large physician groups.",
+  icp: "CMIO / CIO / CMO at hospital systems and large physician groups",
+  tone: [
+    "evidence-first — citations and per-specialty data, never hype",
+    "EHR-native, not bolt-on (the credibility signal for this crowd)",
+    "clinician autonomy respected, never threatened",
+  ],
+  user_notes: ["never say 'AI scribe' generically — say EHR-native ambient capture, or the CMIOs tune out"],
   targets: ["stmarys-health.org", "vantagemedical.com", "northstar-clinics.com", "belmont-health.org"],
   own_post_urls: ["https://www.linkedin.com/posts/cadence-health_physician-burnout-charting"],
   mock: true,
@@ -293,6 +307,13 @@ const LEDGERLINE: CompanySpec = {
   website: "ledgerline.com",
   product_summary:
     "Ledgerline sells an AI spend-management platform that closes the books 5 days faster, to CFOs and controllers at Series B–D SaaS companies.",
+  icp: "CFO / VP Finance / Controller at Series B–D SaaS companies",
+  tone: [
+    "hard cycle-time benchmarks, candid about the tradeoffs",
+    "auditability up front — every automated entry traceable",
+    "protective of the finance team's nights and weekends",
+  ],
+  user_notes: ["lead every automation claim with traceability — controllers reject anything they can't audit"],
   targets: ["flowstate.io", "brightpay.com", "cobaltsaas.com", "tandemhq.com"],
   own_post_urls: ["https://www.linkedin.com/posts/ledgerline_close-the-books-faster"],
   mock: true,

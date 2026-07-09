@@ -18,6 +18,7 @@ import {
   SignalType,
   WarmCard,
 } from "@/lib/types";
+import { CompanyBrain } from "@/lib/brain";
 
 function slug(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -86,6 +87,8 @@ interface WarmSpec {
 export interface CompanySpec {
   website: string;
   product_summary: string;
+  icp?: string; // one-line ICP for the brain (falls back to a generic)
+  tone?: string[]; // tone-of-voice profile (real from own posts where known)
   targets: string[];
   own_post_urls?: string[];
   mock: boolean; // true = fully fictional world
@@ -95,6 +98,10 @@ export interface CompanySpec {
   plan: PlanSpec[];
   warm: WarmSpec[];
   logs: { agent: LogLine["agent"]; msg: string }[];
+  // Optional hand-authored brain extras; most of the brain is derived.
+  decisions?: { decision: string; because: string }[];
+  learnings?: { source: string; insight: string; evidence?: string }[];
+  user_notes?: string[];
 }
 
 function pid(name: string): string {
@@ -235,5 +242,105 @@ export function buildWorld(spec: CompanySpec): AppState {
     run_started_at: stamp,
     run_done: true,
     mock: spec.mock,
+  };
+}
+
+// Derive a clean, well-enriched Company Brain from a spec so /brain never
+// shows the stale global artifact. Most fields are derived from the world
+// (narrative, ICP, content performance from posts × cohort engagement,
+// decisions from cohorts); tone + a steering note are authored per company.
+export function buildBrain(spec: CompanySpec): CompanyBrain {
+  const stamp = "2026-07-09T09:00:00.000Z";
+  const at = (i: number) => new Date(Date.parse(stamp) + i * 1000).toISOString();
+
+  // content performance: one row per post-type plan item, scored by the
+  // cohort it targeted (warm ⇒ hot, engaged ⇒ warm, else cold).
+  const cohortByName = new Map(spec.cohorts.map((c) => [slug(c.name), c]));
+  const content = spec.plan
+    .filter((p) => p.type === "post" || p.type === "blog")
+    .map((p) => {
+      const c = p.cohort ? cohortByName.get(slug(p.cohort)) : undefined;
+      const engagements = c?.engagements ?? 0;
+      const comments = c?.warm ?? 0;
+      const verdict =
+        comments >= 1 ? "hot" : engagements >= 2 ? "warm" : "cold";
+      return {
+        post_id: `seed-${slug(p.title)}`,
+        title: p.title,
+        format: p.media ?? "post",
+        engagements,
+        comments,
+        verdict: verdict as "hot" | "warm" | "cold",
+      };
+    });
+
+  // decisions: the cohort-targeting call + the best-performing cohort, plus
+  // any authored extras.
+  const best = [...spec.cohorts]
+    .filter((c) => slug(c.name) !== "quiet-execs")
+    .sort((a, b) => (b.engagements ?? 0) - (a.engagements ?? 0))[0];
+  const decisions = [
+    {
+      at: at(1),
+      decision: "target content at taste cohorts, not individuals",
+      because: `${spec.cohorts
+        .filter((c) => slug(c.name) !== "quiet-execs")
+        .map((c) => `${c.name} (${c.members.length})`)
+        .join(" and ")} reward different formats — one post per cohort beats one per person`,
+    },
+    ...(best
+      ? [
+          {
+            at: at(2),
+            decision: `lead with the "${best.name}" cohort`,
+            because: `its content earned ${best.engagements ?? 0} engagements this week — the hottest segment`,
+          },
+        ]
+      : []),
+    ...(spec.decisions ?? []).map((d, i) => ({ at: at(3 + i), ...d })),
+  ];
+
+  const learnings = [
+    {
+      at: at(1),
+      source: "scout",
+      insight: `product narrative locked: ${spec.product_summary.slice(0, 80)}…`,
+    },
+    ...(spec.tone?.length
+      ? [{ at: at(2), source: "scout", insight: `tone of voice: ${spec.tone[0]}` }]
+      : []),
+    ...(best
+      ? [
+          {
+            at: at(3),
+            source: "radar",
+            insight: `${best.name} is converting — ${best.format.replace(/_/g, " ")} predicts warm`,
+          },
+        ]
+      : []),
+    ...(spec.learnings ?? []).map((l, i) => ({ at: at(4 + i), ...l })),
+  ];
+
+  const user_notes = (spec.user_notes ?? []).map((note, i) => ({
+    at: at(i),
+    note,
+    applied_to: "plan",
+  }));
+
+  return {
+    company: {
+      website: spec.website,
+      narrative: spec.product_summary,
+      icp:
+        spec.icp ??
+        spec.gravity_map.summary.split(".")[0] ??
+        "the buyers most likely to engage before you reach out",
+      tone_of_voice: spec.tone ?? [],
+      updated_at: stamp,
+    },
+    learnings,
+    content_performance: content,
+    user_notes,
+    decisions,
   };
 }
