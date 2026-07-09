@@ -58,6 +58,51 @@ export default function Prospect({
         </div>
       </div>
 
+      {/* the dossier — what this person actually responds to, at a glance */}
+      {p.topics.length > 0 && (
+        <section className="card rise p-5">
+          <p className="label mb-3">
+            taste profile — what {p.prospect.name.split(" ")[0]} actually responds to
+          </p>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div>
+              <p className="mono text-[10.5px] text-[var(--accent)]">rewards</p>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {p.formats.map((f) => (
+                  <span key={f} className="card-paper px-2.5 py-1 text-[11.5px]">
+                    {f.replaceAll("_", " ")}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="mono text-[10.5px] text-[var(--yellow)]">punishes</p>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {p.topics
+                  .filter((t) => /hostil|hate|against|complain|spam|worse/i.test(t.stance))
+                  .map((t) => (
+                    <span key={t.topic} className="card-paper px-2.5 py-1 text-[11.5px]">
+                      {t.topic}
+                    </span>
+                  ))}
+                <span className="card-paper px-2.5 py-1 text-[11.5px]">
+                  anything that smells automated
+                </span>
+              </div>
+            </div>
+            <div>
+              <p className="mono text-[10.5px] text-[var(--muted)]">attention lives in</p>
+              <p className="mt-1.5 text-[12.5px] leading-relaxed text-[var(--muted)]">
+                {p.influencers.map((i) => i.name).join(" · ") || "—"}
+              </p>
+              <p className="mono mt-1.5 text-[11px] text-[var(--muted)]">
+                {p.behavior} · heat {p.heat}
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
       <div className="grid gap-4 md:grid-cols-2">
         <section className="card p-4.5 p-5">
           <p className="label mb-3.5">topics & stances</p>
