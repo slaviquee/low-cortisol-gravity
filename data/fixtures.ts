@@ -44,7 +44,11 @@ export function fixtureProspects(): BuyerWorldModel[] {
         {
           topic: "SDR productivity",
           stance: "believes generic AI made outbound worse, not better",
-          evidence: [post("janekowalski_sdr-productivity-7318"), post("janekowalski_ai-outbound-7302")],
+          evidence: [
+            post("janekowalski_sdr-productivity-7318"),
+            post("janekowalski_ai-outbound-7302"),
+            "https://outboundradio.fm/ep-42#gradium-transcript",
+          ],
         },
         {
           topic: "reply-rate collapse",
@@ -316,6 +320,49 @@ export function fixturePlan(): PlanItem[] {
       why: "Priya reposts diagram commentary; RevOps is your economic buyer's right hand.",
       evidence: [post("priyanair_ai-workflows-5521")],
       link: post("priyanair_ai-workflows-5521"),
+      done: false,
+    },
+  ];
+}
+
+// Plan v2 — what Strategist proposes after Radar measures engagement.
+export function fixturePlanV2(): PlanItem[] {
+  return [
+    {
+      id: "p2-post-followup",
+      day: "Mon",
+      type: "post",
+      channel: "linkedin",
+      title: "v2 · Publish: the QA-gap follow-up chart",
+      draft:
+        "Last week I showed why SDR productivity collapsed after generic AI.\n\nThe #1 question in the comments: \"so what does QA even look like?\"\n\nHere's the 4-step scoring loop the top-decile teams run before anything ships. Chart below — same 40-team dataset.",
+      why: "your Tuesday chart is the hottest asset in the plan — 3 target engagements incl. 2 comments. Same format, same topic, next chapter.",
+      evidence: ["p-tue-post · 3 engagements"],
+      variant: "A",
+      done: false,
+    },
+    {
+      id: "p2-comment-jane",
+      day: "Mon",
+      type: "comment",
+      channel: "linkedin",
+      title: "v2 · Reply in Jane's comment thread",
+      draft:
+        "Exactly — and the internal fight usually stalls on \"who owns QA\". The teams that win give it to RevOps, not the reps. Happy to share the checklist we see working.",
+      why: "she's warm — keep the thread alive in public, pitch in private.",
+      evidence: ["p-tue-post · her comment"],
+      done: false,
+    },
+    {
+      id: "p2-react-lena",
+      day: "Tue",
+      type: "react",
+      channel: "linkedin",
+      title: "v2 · React to Lena Fischer's repost",
+      draft: "",
+      why: "serendipity engager who fits the ICP — first rung of her ladder.",
+      evidence: ["p-tue-post · her comment"],
+      link: "https://www.linkedin.com/in/lenafischer-sales",
       done: false,
     },
   ];

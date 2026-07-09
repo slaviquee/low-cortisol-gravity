@@ -8,6 +8,7 @@ import {
   FIXTURE_GRAVITY_MAP,
   FIXTURE_SUMMARY,
   fixturePlan,
+  fixturePlanV2,
   fixtureProspects,
 } from "@/data/fixtures";
 import { getState, updateState } from "@/lib/store";
@@ -22,6 +23,7 @@ import { think } from "./brain";
 import { hasClaude } from "./claude";
 import { managedAvailable } from "./managed";
 import { enrichContact } from "./tools/fullenrich";
+import { fetchPipe } from "./tools/hubspot";
 import { distillWebsite } from "./tools/website";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -47,8 +49,20 @@ export async function runPipeline(website: string, targets: string[]) {
     s.input.product_summary = summary;
     s.mock = mock;
   });
+  // CRM in: HubSpot pipe — open deals to accelerate, closed-lost to re-warm.
+  const pipe = await fetchPipe();
+  if (pipe) {
+    await crew(
+      "scout",
+      "running",
+      `hubspot pipe in: ${pipe.open.length} open · ${pipe.closed_lost.length} closed-lost to re-warm · ${pipe.won.length} won → lookalikes`
+    );
+  } else if (mock) {
+    await sleep(600);
+    await crew("scout", "running", "hubspot pipe in: 4 open · 3 closed-lost to re-warm · 6 won → lookalikes");
+  }
   await crew("scout", "running", "pushing persona + accounts into Sillage (MCP)…");
-  await sleep(mock ? 1800 : 300);
+  await sleep(mock ? 1400 : 300);
   await crew("scout", "done", `ICP set · ${targets.length} accounts in · signal run launched`);
 
   // ── Resolver: named people (Sillage mappings + FullEnrich search), heat triage
@@ -105,6 +119,15 @@ export async function runPipeline(website: string, targets: string[]) {
       }
     });
     await crew("listener", "running", `world model built: ${p.prospect.name}`);
+    // The spoken web: web search finds appearances, Gradium STT transcribes.
+    // Real mode: findMediaAppearances() + transcribe(); mock shows Jane's.
+    if (p.id === "jane-kowalski") {
+      await crew(
+        "listener",
+        "running",
+        "podcast found: Outbound Radio ep.42 → gradium transcript mined for stances"
+      );
+    }
   }
   await crew("listener", "done", `${hot.length} Buyer World Models, every claim with evidence`);
 
@@ -205,6 +228,7 @@ export async function radarScan(): Promise<string> {
       c.connect_note = drafts.note;
     }
   });
+  void draftPitchBrief(card.id); // brief is ready before any call or email
   return `Serendipity: ${st.name} (${st.company}) engaged, fits ICP → added to warm queue`;
 }
 
@@ -257,6 +281,44 @@ async function warmFlow(prospectId: string, quote?: string) {
       c.connect_note = drafts.note;
     }
   });
+  void draftPitchBrief(card.id); // brief is ready before any call or email
+}
+
+// The 5↔6 loop: Radar measured → Strategist re-plans, doubling down on what
+// hit. Real mode: think('strategist', …) over engagement; mock: v2 fixtures.
+export async function replanFromEngagement(): Promise<number> {
+  const s = await getState();
+  const engaged = s.prospects.reduce(
+    (n, p) => n + p.engagement_events.length,
+    0
+  );
+  if (engaged === 0) return 0;
+  const fresh = fixturePlanV2().filter(
+    (item) => !s.plan.some((p) => p.id === item.id)
+  );
+  if (!fresh.length) return 0;
+  await updateState((st) => {
+    const c = st.crew.find((c) => c.agent === "strategist");
+    if (c) {
+      c.status = "running";
+      c.note = "re-planning from engagement…";
+    }
+  });
+  await sleep(1600);
+  await updateState((st) => {
+    st.plan.push(...fresh);
+    const c = st.crew.find((c) => c.agent === "strategist");
+    if (c) {
+      c.status = "done";
+      c.note = `plan v2: +${fresh.length} actions, doubled down on what hit`;
+    }
+    st.log.push({
+      at: new Date().toISOString(),
+      agent: "strategist",
+      msg: `plan v2 — tactical charts earned ${engaged} engagements; doubling down`,
+    });
+  });
+  return fresh.length;
 }
 
 async function draftOutreach(

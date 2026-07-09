@@ -45,6 +45,8 @@ machine with credentials (recommended on stage). Add keys in `.env` (see
 | `FULLENRICH_API_KEY` | people search + just-in-time email/phone enrichment |
 | `APIFY_TOKEN` | LinkedIn behavioral layer (harvestapi actors) |
 | `X_API_KEY` | X timelines + following lists (pay-per-use; optional — with `APIFY_TOKEN` set, the cheaper X actors run first) |
+| `HUBSPOT_TOKEN` | the CRM pipe as input: open deals accelerated, closed-lost re-warmed, closed-won → lookalikes |
+| `GRADIUM_API_KEY` | speech-to-text on podcast/video appearances → taste signals in the world model |
 | `XAI_API_KEY` | `x_search` — handle-filtered semantic search over X |
 
 Managed-crew auth: the Agent SDK picks up `ANTHROPIC_API_KEY`, or a Claude
@@ -76,6 +78,8 @@ engager who was never on the target list).
   (comments/reactions), post engagement, post search; plus X actors
   (apidojo tweet-scraper, xquik follower-scraper) as the cheap raw-X path
 - **X API** (pay-per-use, ToS-cleanest X path) + **xAI** Agent Tools `x_search`
+- **HubSpot** — the pipe as input (open / closed-lost / won deals) ·
+  **Gradium** — STT on the spoken web (podcasts, talks) for taste signals
 - Next.js 15 · TypeScript · Tailwind v4 · IBM Plex Mono + Instrument Serif
 
 ## Ethics

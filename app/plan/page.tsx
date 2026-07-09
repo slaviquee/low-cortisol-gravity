@@ -37,11 +37,22 @@ export default function Plan() {
 
   return (
     <div className="space-y-7">
-      <div>
-        <h1 className="text-[26px] font-semibold tracking-tight">generate gravity</h1>
-        <p className="mono label mt-1">
-          react → comment → follow → connect → outreach · the familiarity ladder
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-[26px] font-semibold tracking-tight">generate gravity</h1>
+          <p className="mono label mt-1">
+            react → comment → follow → connect → outreach · the familiarity ladder
+          </p>
+        </div>
+        <button
+          className="btn btn-ghost"
+          onClick={async () => {
+            await fetch("/api/replan", { method: "POST" });
+          }}
+          title="Strategist re-plans from what Radar measured — the 5↔6 loop"
+        >
+          ↻ regenerate from engagement
+        </button>
       </div>
 
       {map && (
