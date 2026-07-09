@@ -4,10 +4,14 @@
 // source of truth — always read from disk, keep only a write queue.
 
 import { promises as fs } from "fs";
+import { tmpdir } from "os";
 import path from "path";
 import { AppState, emptyState } from "./types";
 
-const DIR = path.join(process.cwd(), "data", "runtime");
+// ponytail: tmp storage is enough for Vercel demos; use durable storage if state must survive cold starts.
+const DIR = process.env.VERCEL
+  ? path.join(tmpdir(), "gravity-runtime")
+  : path.join(process.cwd(), "data", "runtime");
 const FILE = path.join(DIR, "state.json");
 
 let writeQueue: Promise<void> = Promise.resolve();

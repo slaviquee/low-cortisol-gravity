@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { runPipeline } from "@/agent/pipeline";
+import { DEMO_RADAR_COOKIE } from "@/lib/demo-state";
 import { resetState, updateState } from "@/lib/store";
 import { FIXTURE_TARGETS, FIXTURE_WEBSITE } from "@/data/fixtures";
 
@@ -8,6 +9,12 @@ export const maxDuration = 300; // managed agents spawn a Claude Code subprocess
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
+  if (process.env.VERCEL) {
+    const res = NextResponse.json({ ok: true });
+    res.cookies.set(DEMO_RADAR_COOKIE, "0", { path: "/", sameSite: "lax" });
+    return res;
+  }
+
   const website: string = body.website?.trim() || FIXTURE_WEBSITE;
   const targets: string[] =
     Array.isArray(body.targets) && body.targets.length
