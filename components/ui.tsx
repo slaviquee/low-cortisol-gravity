@@ -299,13 +299,24 @@ export function LogStream({ log, max = 5 }: { log: LogLine[]; max?: number }) {
   );
 }
 
-export function CopyBtn({ text, label = "copy" }: { text: string; label?: string }) {
+export function CopyBtn({
+  text,
+  label = "copy",
+  small = false,
+}: {
+  text: string;
+  label?: string;
+  small?: boolean;
+}) {
   const [ok, setOk] = useState(false);
   const t = useRef<ReturnType<typeof setTimeout>>(null);
   return (
     <button
       className="btn btn-ghost"
-      style={ok ? { color: "var(--accent)" } : undefined}
+      style={{
+        ...(small ? { padding: "4px 10px", fontSize: 11.5 } : {}),
+        ...(ok ? { color: "var(--accent)" } : {}),
+      }}
       onClick={async () => {
         await navigator.clipboard.writeText(text);
         setOk(true);
@@ -339,4 +350,96 @@ export function warmthScore(prospects: BuyerWorldModel[]): number {
     (p) => 0.6 * p.heat + 0.4 * Math.min(p.gravity_score * 2, 100)
   );
   return Math.round((per.reduce((a, b) => a + b, 0) / hot.length) * 10) / 10;
+}
+
+/* ── semantic temperature — the gradients MEAN something ──────────
+   cold gray-blue → amber → hot coral. One scale everywhere:
+   prospects (heat × engagement), posts (engagement earned), pipeline. */
+
+function mix(c1: string, c2: string, t: number): string {
+  const p = (c: string) => [
+    parseInt(c.slice(1, 3), 16),
+    parseInt(c.slice(3, 5), 16),
+    parseInt(c.slice(5, 7), 16),
+  ];
+  const [r1, g1, b1] = p(c1);
+  const [r2, g2, b2] = p(c2);
+  const l = (a: number, b: number) => Math.round(a + (b - a) * t);
+  return `rgb(${l(r1, r2)}, ${l(g1, g2)}, ${l(b1, b2)})`;
+}
+
+export function tempGradient(t: number): string {
+  const v = Math.max(0, Math.min(1, t));
+  const a =
+    v < 0.5 ? mix("#c9cfd2", "#ffd166", v * 2) : mix("#ffd166", "#ffb35c", (v - 0.5) * 2);
+  const b =
+    v < 0.5 ? mix("#bcc7c7", "#ffc25e", v * 2) : mix("#ffc25e", "#ff7d8e", (v - 0.5) * 2);
+  return `linear-gradient(135deg, ${a}, ${b})`;
+}
+
+// A prospect's temperature: how hot this client is right now.
+export function prospectTemp(p: BuyerWorldModel): number {
+  return (0.6 * p.heat + 0.4 * Math.min(p.gravity_score * 2, 100)) / 100;
+}
+
+// A post's temperature: engagement it actually earned.
+export function postTemp(state: AppState, postId: string): number {
+  let n = 0;
+  for (const p of state.prospects)
+    n += p.engagement_events.filter((e) => e.post_id === postId).length;
+  for (const w of state.warm)
+    if (w.serendipity && w.event.post_id === postId) n++;
+  return Math.min(1, n / 4);
+}
+
+export function TempSwatch({ t, title }: { t: number; title?: string }) {
+  return (
+    <span
+      title={title ?? `temperature ${Math.round(t * 100)}/100`}
+      className="inline-block h-3.5 w-6 shrink-0 rounded-[5px]"
+      style={{ background: tempGradient(t), transition: "background 600ms" }}
+    />
+  );
+}
+
+export function TempLegend({
+  marker,
+  light = false,
+}: {
+  marker?: number;
+  light?: boolean;
+}) {
+  return (
+    <div>
+      <div
+        className="relative h-[5px] rounded-full"
+        style={{
+          background:
+            "linear-gradient(90deg, #c9cfd2, #ffd166 45%, #ffb35c 72%, #ff7d8e)",
+        }}
+      >
+        {marker !== undefined && (
+          <span
+            className="absolute top-1/2 h-[11px] w-[11px] -translate-x-1/2 -translate-y-1/2 rounded-full"
+            style={{
+              left: `${Math.max(2, Math.min(98, marker * 100))}%`,
+              background: light ? "#fff" : "var(--ink)",
+              boxShadow: light
+                ? "0 0 0 2px rgba(0,0,0,.25)"
+                : "0 0 0 2px var(--bg)",
+              transition: "left 800ms cubic-bezier(.2,.7,.2,1)",
+            }}
+          />
+        )}
+      </div>
+      <div
+        className={`mt-1 flex justify-between text-[10px] lowercase ${
+          light ? "text-white/70" : "text-[var(--muted)]"
+        }`}
+      >
+        <span>cold</span>
+        <span>hot</span>
+      </div>
+    </div>
+  );
 }

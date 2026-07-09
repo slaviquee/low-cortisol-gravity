@@ -34,7 +34,13 @@ export default function Warm() {
 
   return (
     <div className="space-y-5">
-      <div className="gradient-warm rise p-6">
+      <div
+        className="gradient-warm rise p-6"
+        style={{
+          filter: `saturate(${0.5 + 0.5 * Math.min(1, warmth / 100)}) hue-rotate(${-(1 - Math.min(1, warmth / 100)) * 22}deg)`,
+          transition: "filter 1.2s ease",
+        }}
+      >
         <div className="relative z-10 flex flex-wrap items-end justify-between gap-4">
           <div>
             <h1 className="text-[26px] font-bold tracking-tight">engagement tracking</h1>

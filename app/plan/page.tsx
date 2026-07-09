@@ -2,7 +2,13 @@
 
 // GRAVITY PLAN — the week, sequenced up the familiarity ladder.
 
-import { CopyBtn, Evidence, usePolledState } from "@/components/ui";
+import {
+  CopyBtn,
+  Evidence,
+  TempSwatch,
+  postTemp,
+  usePolledState,
+} from "@/components/ui";
 import { PlanActionType } from "@/lib/types";
 
 const TYPE_META: Record<PlanActionType, string> = {
@@ -95,6 +101,12 @@ export default function Plan() {
                         <span className="mono label" style={{ fontSize: 10.5 }}>
                           variant {item.variant}
                         </span>
+                      )}
+                      {item.type === "post" && (
+                        <TempSwatch
+                          t={postTemp(state, item.id)}
+                          title="engagement this post earned"
+                        />
                       )}
                     </div>
                     <div className="flex items-center gap-2">

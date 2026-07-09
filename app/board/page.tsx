@@ -1,186 +1,345 @@
 "use client";
 
-// PROSPECT BOARD — the crew works, dials settle, cards fill in, hottest first.
+// PIPELINE — one screen, left to right: map buyers → generate gravity →
+// track engagement. What's happening, where things stand, what you do next.
 
 import Link from "next/link";
+import { useState } from "react";
 import {
+  CopyBtn,
   CrewStrip,
   DotTrace,
   GravityWell,
-  HeatBar,
-  ScoreRing,
-  StateChip,
+  TempLegend,
+  TempSwatch,
+  postTemp,
+  prospectTemp,
   usePolledState,
   warmthScore,
 } from "@/components/ui";
 
-export default function Board() {
-  const state = usePolledState();
+function ColHeader({
+  n,
+  title,
+  href,
+  hrefLabel,
+}: {
+  n: string;
+  title: string;
+  href?: string;
+  hrefLabel?: string;
+}) {
+  return (
+    <div className="mb-1 flex items-baseline justify-between">
+      <p className="label">
+        <span className="mono mr-2 text-[10.5px] text-[var(--faint)]">{n}</span>
+        {title}
+      </p>
+      {href && (
+        <Link href={href} className="link-green text-[11.5px]">
+          <span className="arr">→</span> {hrefLabel}
+        </Link>
+      )}
+    </div>
+  );
+}
+
+const Hairline = () => <div className="h-px bg-[var(--card-deep)]" />;
+
+export default function Pipeline() {
+  const state = usePolledState(1000);
+  const [scanning, setScanning] = useState(false);
+
   if (!state) return <p className="label">connecting…</p>;
 
   const hot = state.prospects
     .filter((p) => p.state !== "low_orbit")
-    .sort((a, b) => b.heat - a.heat);
+    .sort((a, b) => prospectTemp(b) - prospectTemp(a));
   const quiet = state.prospects.filter((p) => p.state === "low_orbit");
 
   const intentDensity = hot.length
     ? hot.reduce((a, p) => a + p.heat, 0) / hot.length / 100
     : 0;
-  const coverage = state.prospects.length
-    ? hot.filter((p) => p.topics.length > 0).length / (hot.length || 1)
-    : 0;
+  const planDone = state.plan.filter((p) => p.done).length;
+  const planProgress = state.plan.length ? planDone / state.plan.length : 0;
   const warmRate = hot.length
-    ? hot.filter((p) => p.state === "warm" || p.state === "in_conversation").length / hot.length
+    ? hot.filter((p) => p.state === "warm" || p.state === "in_conversation")
+        .length / hot.length
     : 0;
   const warmth = warmthScore(state.prospects);
+  const w = Math.min(1, warmth / 100);
+
+  const nextActions = state.plan.filter((p) => !p.done).slice(0, 5);
+  const lastLogs = [...state.log].reverse().slice(0, 3);
+
+  async function toggle(id: string, done: boolean) {
+    await fetch("/api/plan", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id, done }),
+    });
+  }
+
+  async function markSent(id: string) {
+    await fetch("/api/warm", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id, sent: true }),
+    });
+  }
+
+  async function scan() {
+    setScanning(true);
+    try {
+      await fetch("/api/radar", { method: "POST" });
+    } finally {
+      setScanning(false);
+    }
+  }
 
   return (
-    <div className="gap-6 lg:grid lg:grid-cols-[1fr_300px]">
-      <div className="space-y-7">
-        <div className="flex items-end justify-between">
-          <div>
-            <h1 className="text-[26px] font-semibold tracking-tight">buyer mapping</h1>
-            {state.input.product_summary && (
-              <p className="label mt-1 max-w-2xl normal-case">
-                {state.input.product_summary}
-              </p>
-            )}
-          </div>
-          <p className="mono label shrink-0 whitespace-nowrap pl-4">
-            {hot.length} hot · {quiet.length} low-orbit
-            {state.mock && " · demo"}
-          </p>
+    <div className="space-y-6">
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <h1 className="text-[24px] font-semibold tracking-tight">pipeline</h1>
+          {state.input.product_summary && (
+            <p className="label mt-1 max-w-2xl normal-case">
+              {state.input.product_summary}
+            </p>
+          )}
         </div>
-
-        <CrewStrip crew={state.crew} />
-
-        {!state.run_done && state.log.length > 0 && (
+        {!state.run_done && state.log.length > 0 ? (
           <p
             key={state.log[state.log.length - 1].msg}
-            className="log-in mono text-[12px] text-[var(--muted)]"
+            className="log-in mono max-w-xs text-right text-[11.5px] text-[var(--muted)]"
           >
             <span className="text-[var(--accent)]">
               {state.log[state.log.length - 1].agent}
             </span>{" "}
             · {state.log[state.log.length - 1].msg}
           </p>
+        ) : (
+          <p className="mono label shrink-0 whitespace-nowrap">
+            {hot.length} hot · {quiet.length} low-orbit{state.mock && " · demo"}
+          </p>
         )}
+      </div>
 
-        <div className="grid grid-cols-3 gap-2">
+      <CrewStrip crew={state.crew} />
+
+      <div className="gap-7 space-y-8 lg:grid lg:grid-cols-[1.1fr_1.25fr_1.15fr_250px] lg:space-y-0">
+        {/* ── 01 · map buyers ─────────────────────────────── */}
+        <section className="min-w-0">
+          <ColHeader n="01" title="map buyers" />
           <GravityWell
             value={intentDensity}
             label="intent density"
             display={intentDensity.toFixed(3)}
           />
+          <Hairline />
+          {hot.map((p) => (
+            <Link
+              key={p.id}
+              href={`/prospect/${p.id}`}
+              className="group flex items-center gap-3 border-b border-[var(--card-deep)] py-3 transition-colors hover:bg-[var(--card)]/60"
+            >
+              <TempSwatch
+                t={prospectTemp(p)}
+                title={`buyer temperature ${Math.round(prospectTemp(p) * 100)}`}
+              />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[13.5px] font-semibold tracking-tight">
+                  {p.prospect.name}
+                </p>
+                <p className="label truncate" style={{ fontSize: 11.5 }}>
+                  {p.prospect.title} @ {p.prospect.company}
+                </p>
+              </div>
+              <span className="mono text-[12px]">{p.gravity_score}</span>
+              <DotTrace p={p} />
+            </Link>
+          ))}
+          {quiet.map((p) => (
+            <div
+              key={p.id}
+              className="flex items-center gap-3 border-b border-[var(--card-deep)] py-3 opacity-50"
+            >
+              <TempSwatch t={0.05} title="low-orbit — quiet on socials" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[13px]">{p.prospect.name}</p>
+                <p className="label truncate" style={{ fontSize: 11 }}>
+                  low-orbit · email-first
+                </p>
+              </div>
+              <span className="mono truncate text-[10.5px] text-[var(--muted)]">
+                {p.contact.emails[0] ?? "…"}
+              </span>
+            </div>
+          ))}
+        </section>
+
+        {/* ── 02 · generate gravity ───────────────────────── */}
+        <section className="min-w-0">
+          <ColHeader n="02" title="generate gravity" href="/plan" hrefLabel="full plan" />
           <GravityWell
-            value={coverage}
-            label="orbit coverage"
-            display={coverage >= 1 ? "full" : `${Math.round(coverage * 100)}%`}
+            value={planProgress}
+            label="plan executed"
+            display={`${planDone}/${state.plan.length || "—"}`}
           />
+          <Hairline />
+          {state.plan.length === 0 && (
+            <p className="label pulse py-4">strategist is drafting…</p>
+          )}
+          {nextActions.map((item) => (
+            <div key={item.id} className="border-b border-[var(--card-deep)] py-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="min-w-0 truncate text-[13px]">
+                  <span className="link-green">→ {item.type}</span>{" "}
+                  <span className="font-medium">{item.title}</span>
+                </p>
+                {item.type === "post" && (
+                  <TempSwatch
+                    t={postTemp(state, item.id)}
+                    title="engagement this post earned"
+                  />
+                )}
+              </div>
+              <p className="label mt-0.5 truncate" style={{ fontSize: 11 }}>
+                {item.why}
+              </p>
+              <div className="mt-2 flex gap-1.5">
+                {item.draft && <CopyBtn small text={item.draft} />}
+                {item.link && (
+                  <a
+                    className="btn btn-ghost"
+                    style={{ padding: "4px 10px", fontSize: 11.5 }}
+                    href={item.link}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    open ↗
+                  </a>
+                )}
+                <button
+                  className="btn"
+                  style={{ padding: "4px 10px", fontSize: 11.5 }}
+                  onClick={() => toggle(item.id, true)}
+                >
+                  done ✓
+                </button>
+              </div>
+            </div>
+          ))}
+          {state.plan.length > 0 && nextActions.length === 0 && (
+            <p className="label py-4">
+              all done — radar is watching. next week&apos;s plan tunes itself.
+            </p>
+          )}
+        </section>
+
+        {/* ── 03 · track engagement ───────────────────────── */}
+        <section className="min-w-0">
+          <ColHeader n="03" title="track engagement" href="/warm" hrefLabel="warm queue" />
           <GravityWell
             value={warmRate}
             label="warm rate"
             display={`${Math.round(warmRate * 100)}%`}
           />
-        </div>
-
-        {hot.length === 0 && (
-          <div className="card p-10 text-center">
-            <p className="label">the crew is resolving your buyers…</p>
-          </div>
-        )}
-
-        <div className="grid gap-2.5 md:grid-cols-2">
-          {hot.map((p, i) => (
-            <Link
-              key={p.id}
-              href={`/prospect/${p.id}`}
-              className={`card rise block p-4 ${
-                p.state === "warm" || p.state === "in_conversation" ? "warm-edge" : ""
-              }`}
-              style={{ animationDelay: `${i * 80}ms` }}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3">
-                  <DotTrace p={p} />
-                  <div>
-                    <p className="text-[15px] font-semibold tracking-tight">
-                      {p.prospect.name}
-                    </p>
-                    <p className="label mt-0.5">
-                      {p.prospect.title} @ {p.prospect.company}
-                    </p>
-                  </div>
-                </div>
-                <ScoreRing score={p.gravity_score} />
-              </div>
-              <div className="mt-3.5 flex items-center justify-between">
-                <HeatBar heat={p.heat} />
-                <StateChip state={p.state} />
-              </div>
-              {p.topics.length > 0 && (
-                <p className="mt-3 truncate text-[12px] text-[var(--muted)]">
-                  {p.topics.map((t) => t.topic).join(" · ")}
-                </p>
-              )}
-              {p.signals.length > 0 && (
-                <p className="link-green mt-1.5 text-[12px]">
-                  → {p.signals[0].detail}
-                </p>
-              )}
-            </Link>
-          ))}
-        </div>
-
-        {quiet.length > 0 && (
-          <div>
-            <p className="label mb-2">
-              low-orbit — quiet on socials → email-first path, sillage-timed
+          <Hairline />
+          <button
+            className="btn btn-ghost my-3 w-full justify-center"
+            style={{ padding: "6px 12px", fontSize: 12 }}
+            onClick={scan}
+            disabled={scanning}
+          >
+            {scanning ? "scanning…" : "◉ scan engagement"}
+          </button>
+          {state.warm.length === 0 && (
+            <p className="label py-2" style={{ fontSize: 11.5 }}>
+              no engagement yet — execute the plan, then scan
             </p>
-            <div className="grid gap-2 md:grid-cols-2">
-              {quiet.map((p) => (
-                <div key={p.id} className="card flex items-center justify-between p-3.5 opacity-70">
-                  <div>
-                    <span className="text-[13px] font-medium">{p.prospect.name}</span>
-                    <span className="label ml-2">
-                      {p.prospect.title} @ {p.prospect.company}
-                    </span>
-                  </div>
-                  <span className="mono text-[11.5px] text-[var(--muted)]">
-                    {p.contact.emails[0] ?? "resolving…"}
-                  </span>
+          )}
+          {state.warm.slice(0, 4).map((w) => (
+            <div key={w.id} className={`border-b border-[var(--card-deep)] py-3 ${w.sent ? "opacity-45" : ""}`}>
+              <div className="flex items-center justify-between gap-2">
+                <p className="min-w-0 truncate text-[13px] font-medium">
+                  {w.name}
+                  {w.serendipity && (
+                    <span className="link-green ml-1.5 text-[10px]">serendipity</span>
+                  )}
+                </p>
+                <TempSwatch t={w.event.kind === "comment" ? 1 : 0.75} title="engagement temperature" />
+              </div>
+              <p className="label mt-0.5 truncate italic" style={{ fontSize: 11.5 }}>
+                {w.event.kind === "comment" ? `“${w.event.quote}”` : "reacted to your post"}
+              </p>
+              {w.enriching ? (
+                <p className="pulse mono mt-1 text-[10.5px] text-[var(--muted)]">
+                  fullenrich · verifying contact…
+                </p>
+              ) : (
+                <p className="mono mt-1 truncate text-[10.5px] text-[var(--muted)]">
+                  ✉ {w.email}
+                </p>
+              )}
+              {!w.enriching && (
+                <div className="mt-2 flex gap-1.5">
+                  <CopyBtn small text={w.email_draft} label="copy email" />
+                  {!w.sent && (
+                    <button
+                      className="btn"
+                      style={{ padding: "4px 10px", fontSize: 11.5 }}
+                      onClick={() => markSent(w.id)}
+                    >
+                      sent →
+                    </button>
+                  )}
                 </div>
+              )}
+            </div>
+          ))}
+          {lastLogs.length > 0 && (
+            <div className="mt-3 space-y-1">
+              {lastLogs.map((l, i) => (
+                <p key={`${l.at}-${i}`} className="mono truncate text-[10.5px] text-[var(--faint)]">
+                  {l.at.slice(11, 19)} <span className="text-[var(--accent)]">{l.agent}</span> · {l.msg}
+                </p>
               ))}
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </section>
 
-      {/* the statement piece */}
-      <aside className="gradient-warm mt-8 flex min-h-[420px] flex-col justify-end p-6 lg:mt-0 lg:min-h-full">
-        <div className="relative z-10">
-          <h2 className="text-[26px] font-bold tracking-tight">warmth score</h2>
-          <p className="mt-1.5 max-w-[220px] text-[12.5px] leading-relaxed text-white/85">
-            current pipeline readiness across all mapped accounts
-          </p>
-          <p className="mono mt-5 text-[30px] font-medium">
-            {warmth.toFixed(1)} <span className="text-white/70">/ 100</span>
-          </p>
-          <div className="mt-5 flex items-center justify-between gap-3 whitespace-nowrap border-t border-white/25 pt-3.5">
-            <span className="mono text-[10.5px] text-white/80">
-              last sync {new Date().toLocaleTimeString([], { hour12: false })}
-            </span>
-            <span className="flex shrink-0 gap-3.5">
-              <Link href="/plan" className="text-[11.5px] font-medium text-white hover:opacity-75">
-                plan
-              </Link>
+        {/* ── the temperature of the whole pipeline ───────── */}
+        <aside
+          className="gradient-warm flex min-h-[380px] flex-col justify-end p-5 lg:min-h-full"
+          style={{
+            filter: `saturate(${0.5 + 0.5 * w}) hue-rotate(${-(1 - w) * 22}deg)`,
+            transition: "filter 1.2s ease",
+          }}
+        >
+          <div className="relative z-10">
+            <h2 className="text-[22px] font-bold tracking-tight">warmth score</h2>
+            <p className="mt-1 text-[11.5px] leading-relaxed text-white/85">
+              every buyer&apos;s temperature, averaged — the panel itself runs
+              colder or hotter with it
+            </p>
+            <p className="mono mt-4 text-[27px] font-medium">
+              {warmth.toFixed(1)} <span className="text-white/70">/ 100</span>
+            </p>
+            <div className="mt-4">
+              <TempLegend marker={w} light />
+            </div>
+            <div className="mt-3 flex items-center justify-between gap-3 whitespace-nowrap border-t border-white/25 pt-3">
+              <span className="mono text-[10px] text-white/80">
+                sync {new Date().toLocaleTimeString([], { hour12: false })}
+              </span>
               <Link href="/warm" className="text-[11.5px] font-medium text-white hover:opacity-75">
                 warm queue
               </Link>
-            </span>
+            </div>
           </div>
-        </div>
-      </aside>
+        </aside>
+      </div>
     </div>
   );
 }
