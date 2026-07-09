@@ -3,7 +3,7 @@
 // WARM QUEUE — the loop closes: engagement → JIT enrichment → the touch.
 
 import { useState } from "react";
-import { CopyBtn, usePolledState, warmthScore } from "@/components/ui";
+import { CopyBtn, meshStyle, usePolledState, warmthScore } from "@/components/ui";
 
 export default function Warm() {
   const state = usePolledState(1000);
@@ -44,10 +44,7 @@ export default function Warm() {
     <div className="space-y-5">
       <div
         className="gradient-warm rise p-6"
-        style={{
-          filter: `saturate(${0.5 + 0.5 * Math.min(1, warmth / 100)}) hue-rotate(${-(1 - Math.min(1, warmth / 100)) * 22}deg)`,
-          transition: "filter 1.2s ease",
-        }}
+        style={meshStyle(Math.min(1, warmth / 100))}
       >
         <div className="relative z-10 flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -83,7 +80,7 @@ export default function Warm() {
         {state.warm.map((w) => (
           <div
             key={w.id}
-            className={`card rise p-5 ${w.sent ? "opacity-45" : "warm-edge"}`}
+            className={`card rise p-5 ${w.sent ? "opacity-45" : ""}`}
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>

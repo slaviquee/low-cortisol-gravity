@@ -276,7 +276,7 @@ export function CopyBtn({
   const t = useRef<ReturnType<typeof setTimeout>>(null);
   return (
     <button
-      className="btn btn-ghost"
+      className={`btn btn-ghost ${ok ? "pop" : ""}`}
       style={{
         ...(small ? { padding: "4px 10px", fontSize: 11.5 } : {}),
         ...(ok ? { color: "var(--accent)" } : {}),
@@ -354,6 +354,34 @@ export function postTemp(state: AppState, postId: string): number {
   for (const w of state.warm)
     if (w.serendipity && w.event.post_id === postId) n++;
   return Math.min(1, n / 4);
+}
+
+// The statement panel's palette IS the state: cold gray-blue → amber → coral.
+// Index 0-2: base gradient stops · 3-6: mesh blob colors.
+const MESH_COLD = ["#a9b6ba", "#c9d2cf", "#8fa2aa", "#b7c5c3", "#d3dbd8", "#7e929c", "#a3b5b2"];
+const MESH_AMBER = ["#eec584", "#f6dfa0", "#e0a76e", "#f0cf8e", "#f8e5a8", "#d9995f", "#eabf7c"];
+const MESH_HOT = ["#ffb35c", "#ffd166", "#ff8f7d", "#ffc759", "#ffe46e", "#ff7086", "#ffaa7a"];
+
+function meshColor(i: number, t: number): string {
+  const v = Math.max(0, Math.min(1, t));
+  return v < 0.5
+    ? mix(MESH_COLD[i], MESH_AMBER[i], v * 2)
+    : mix(MESH_AMBER[i], MESH_HOT[i], (v - 0.5) * 2);
+}
+
+const rgba = (rgb: string, a: number) => rgb.replace("rgb(", "rgba(").replace(")", `, ${a})`);
+
+export function meshStyle(t: number): React.CSSProperties {
+  const c = (i: number) => meshColor(i, t);
+  return {
+    "--mesh-base": `linear-gradient(165deg, ${c(0)} 0%, ${c(1)} 42%, ${c(2)} 100%)`,
+    "--mesh-blobs": [
+      `radial-gradient(36% 32% at 30% 22%, ${rgba(c(3), 0.95)} 0%, transparent 68%)`,
+      `radial-gradient(30% 34% at 74% 30%, ${rgba(c(4), 0.9)} 0%, transparent 64%)`,
+      `radial-gradient(40% 36% at 56% 82%, ${rgba(c(5), 0.9)} 0%, transparent 70%)`,
+      `radial-gradient(26% 26% at 18% 78%, ${rgba(c(6), 0.8)} 0%, transparent 66%)`,
+    ].join(", "),
+  } as React.CSSProperties;
 }
 
 export function TempSwatch({ t, title }: { t: number; title?: string }) {

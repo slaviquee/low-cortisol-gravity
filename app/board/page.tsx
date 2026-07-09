@@ -12,6 +12,7 @@ import {
   Stat,
   TempLegend,
   TempSwatch,
+  meshStyle,
   postTemp,
   prospectTemp,
   usePolledState,
@@ -314,10 +315,7 @@ export default function Pipeline() {
         {/* ── the temperature of the whole pipeline ───────── */}
         <aside
           className="gradient-warm flex min-h-[380px] flex-col justify-end p-5 lg:min-h-full"
-          style={{
-            filter: `saturate(${0.5 + 0.5 * w}) hue-rotate(${-(1 - w) * 22}deg)`,
-            transition: "filter 1.2s ease",
-          }}
+          style={meshStyle(w)}
         >
           <div className="relative z-10">
             <h2 className="text-[22px] font-bold tracking-tight">warmth score</h2>
