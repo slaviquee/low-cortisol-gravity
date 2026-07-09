@@ -112,6 +112,8 @@ export interface WarmCard {
   connect_note: string;
   serendipity: boolean; // engager we never prospected — ICP-fit stranger
   sent: boolean;
+  meeting: boolean; // booked — the success metric: prospect → meeting
+  pitch_brief?: string; // tailored per-lead pitch outline (→ Gamma deck)
 }
 
 export interface LogLine {

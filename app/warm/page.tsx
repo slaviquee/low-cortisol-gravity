@@ -24,11 +24,19 @@ export default function Warm() {
     }
   }
 
-  async function markSent(id: string) {
+  async function patch(id: string, body: Record<string, boolean>) {
     await fetch("/api/warm", {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ id, sent: true }),
+      body: JSON.stringify({ id, ...body }),
+    });
+  }
+
+  async function pitch(id: string) {
+    await fetch("/api/pitch", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id }),
     });
   }
 
@@ -116,13 +124,51 @@ export default function Warm() {
                     {w.connect_note}
                   </p>
                 )}
-                <div className="mt-3.5 flex gap-2">
+                {w.pitch_brief && (
+                  <div className="card-paper mt-3 p-3.5">
+                    <p className="link-green mb-1.5 text-[11.5px]">
+                      → pitch brief · tailored to {w.name.split(" ")[0]}
+                    </p>
+                    <pre className="whitespace-pre-wrap font-[family-name:var(--font-mono)] text-[12px] leading-relaxed text-[#33332f]">
+                      {w.pitch_brief}
+                    </pre>
+                  </div>
+                )}
+                <div className="mt-3.5 flex flex-wrap gap-2">
                   <CopyBtn text={w.email_draft} label="copy email" />
                   {w.connect_note && <CopyBtn text={w.connect_note} label="copy note" />}
+                  {!w.pitch_brief ? (
+                    <button className="btn btn-ghost" onClick={() => pitch(w.id)}>
+                      → pitch brief
+                    </button>
+                  ) : (
+                    <>
+                      <CopyBtn text={w.pitch_brief} label="copy brief" />
+                      <a
+                        className="btn btn-ghost"
+                        href="https://gamma.app/create"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        gamma deck ↗
+                      </a>
+                    </>
+                  )}
                   {!w.sent && (
-                    <button className="btn" onClick={() => markSent(w.id)}>
+                    <button className="btn" onClick={() => patch(w.id, { sent: true })}>
                       mark sent →
                     </button>
+                  )}
+                  {w.sent && !w.meeting && (
+                    <button className="btn" onClick={() => patch(w.id, { meeting: true })}>
+                      meeting booked ✓
+                    </button>
+                  )}
+                  {w.meeting && (
+                    <span className="flex items-center gap-1.5 text-[12px] font-medium text-[var(--accent)]">
+                      <span className="dot" style={{ background: "var(--accent)" }} />
+                      meeting booked
+                    </span>
                   )}
                 </div>
               </>

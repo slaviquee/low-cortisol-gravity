@@ -10,7 +10,7 @@ import {
   fixturePlan,
   fixtureProspects,
 } from "@/data/fixtures";
-import { updateState } from "@/lib/store";
+import { getState, updateState } from "@/lib/store";
 import {
   AppState,
   BuyerWorldModel,
@@ -186,6 +186,7 @@ export async function radarScan(): Promise<string> {
     email_draft: "",
     connect_note: "",
     serendipity: true,
+    meeting: false,
     sent: false,
   };
   await updateState((s) => {
@@ -220,6 +221,7 @@ async function warmFlow(prospectId: string, quote?: string) {
     email_draft: "",
     connect_note: "",
     serendipity: false,
+    meeting: false,
     sent: false,
   };
   await updateState((s) => {
@@ -285,4 +287,34 @@ async function draftOutreach(
     email: `Subject: the QA gap\n\nHi ${first} — ${hook} matches what we measured across 40 teams: everyone automated the sending, nobody automated the checking. That gap is exactly what we work on. Worth 20 minutes next week to compare notes on what you're seeing internally?\n\n— Alex @ Loopwell`,
     note: `${first} — enjoyed your take on yesterday's thread. We're working on ${noteHook}. Happy to swap notes.`,
   };
+}
+
+// Agent-8 move: a tailored pitch brief per warm lead — their words, their
+// topics, your proof — ready to paste into Gamma for a per-lead deck.
+export async function draftPitchBrief(cardId: string): Promise<string> {
+  const s = await getState();
+  const card = s.warm.find((w) => w.id === cardId);
+  if (!card) return "";
+  const model = s.prospects.find((x) => x.id === card.prospectId) ?? null;
+  const quote = card.event.quote ?? "";
+  const first = card.name.split(" ")[0];
+
+  let brief: string | null = null;
+  if (model) {
+    brief = await think(
+      "radar",
+      `Create a tailored pitch brief (a compact deck outline, 5 sections max) for ${card.name}, ${card.title}. Their engagement with us: "${quote || "reacted to our post"}". World model: ${JSON.stringify({ topics: model.topics, formats: model.formats, behavior: model.behavior })}. Product: ${s.input.product_summary}. Open on THEIR words/stance, mirror the formats they reward, end with a 20-minute working-session ask. Plain text, numbered sections.`,
+      { deep: true }
+    );
+  }
+  if (!brief) {
+    const topics = model?.topics.map((t) => t.topic).join(" · ") || "outbound efficiency";
+    brief = `pitch brief — ${card.name}\n\n1 · open on their words\n    "${quote || "the QA gap in automated outbound"}"\n2 · their world\n    ${topics}\n3 · your proof (their format: numbers first)\n    12,000 emails audited — 4.1% → 2.3% reply rate without QA\n4 · the fix, in their workflow\n    score every touch before it ships; fewer, better sends\n5 · the ask\n    20-minute working session on ${first}'s own numbers\n\n→ paste into gamma.app — a per-lead deck in one click`;
+  }
+  await updateState((st) => {
+    const c = st.warm.find((w) => w.id === cardId);
+    if (c) c.pitch_brief = brief!;
+    st.log.push({ at: new Date().toISOString(), agent: "radar", msg: `pitch brief drafted for ${card.name}` });
+  });
+  return brief;
 }

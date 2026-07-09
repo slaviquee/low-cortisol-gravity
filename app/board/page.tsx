@@ -68,6 +68,8 @@ export default function Pipeline() {
     : 0;
   const warmth = warmthScore(state.prospects);
   const w = Math.min(1, warmth / 100);
+  const meetings = state.warm.filter((x) => x.meeting).length;
+  const meetingConv = hot.length ? meetings / hot.length : 0;
 
   const nextActions = state.plan.filter((p) => !p.done).slice(0, 5);
   const lastLogs = [...state.log].reverse().slice(0, 3);
@@ -325,6 +327,10 @@ export default function Pipeline() {
             </p>
             <p className="mono mt-4 text-[27px] font-medium">
               {warmth.toFixed(1)} <span className="text-white/70">/ 100</span>
+            </p>
+            <p className="mono mt-1.5 text-[11px] text-white/85">
+              {meetings} meeting{meetings === 1 ? "" : "s"} · prospect→meeting{" "}
+              {Math.round(meetingConv * 100)}%
             </p>
             <div className="mt-4">
               <TempLegend marker={w} light />
