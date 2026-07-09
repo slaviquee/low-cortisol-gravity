@@ -78,8 +78,15 @@ export async function runPipeline(
   });
   await crew("scout", "running", "tone locked: numbers-first · short · no emoji");
   // CRM in: HubSpot pipe — open deals to accelerate, closed-lost to re-warm.
+  // Pipe accounts are MERGED into targeting, not just displayed.
   const pipe = await fetchPipe();
   if (pipe) {
+    targets = Array.from(
+      new Set([...targets, ...pipe.closed_lost, ...pipe.open])
+    ).slice(0, 20); // Sillage's recommended top-accounts batch size
+    await updateState((s) => {
+      s.input.targets = targets;
+    });
     await crew(
       "scout",
       "running",

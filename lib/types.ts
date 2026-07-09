@@ -63,7 +63,13 @@ export interface BuyerWorldModel {
   engagement_events: EngagementEvent[];
 }
 
-export type PlanActionType = "post" | "comment" | "follow" | "react" | "connect";
+export type PlanActionType =
+  | "post"
+  | "blog" // long-form — anchors the week's feed posts
+  | "comment"
+  | "follow"
+  | "react"
+  | "connect";
 
 export interface PlanItem {
   id: string;

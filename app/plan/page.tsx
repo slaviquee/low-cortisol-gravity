@@ -14,6 +14,7 @@ import { PlanActionType } from "@/lib/types";
 
 const TYPE_META: Record<PlanActionType, string> = {
   post: "post",
+  blog: "blog",
   comment: "comment",
   follow: "follow",
   react: "react",
