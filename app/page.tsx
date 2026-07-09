@@ -149,7 +149,7 @@ const SCENES = [SceneCompany, SceneCrm, SceneTaste, ScenePlan, SceneLoop];
 function DemoStage() {
   const [scene, setScene] = useState(0);
   useEffect(() => {
-    const id = setInterval(() => setScene((s) => (s + 1) % SCENES.length), 3800);
+    const id = setInterval(() => setScene((s) => (s + 1) % SCENES.length), 6500);
     return () => clearInterval(id);
   }, []);
   const Scene = SCENES[scene];
