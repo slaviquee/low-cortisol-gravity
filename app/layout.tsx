@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, IBM_Plex_Mono } from "next/font/google";
+import { Geist, IBM_Plex_Mono, Instrument_Serif } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 
@@ -13,6 +13,15 @@ const mono = IBM_Plex_Mono({
   subsets: ["latin"],
   weight: ["400", "500"],
   variable: "--font-mono",
+});
+
+// The accent voice — sharp editorial serif (Signifier stand-in; Klim's
+// original is commercial). Headlines and statement moments only.
+const serif = Instrument_Serif({
+  subsets: ["latin"],
+  weight: "400",
+  style: ["normal", "italic"],
+  variable: "--font-serif",
 });
 
 export const metadata: Metadata = {
@@ -34,13 +43,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${sans.variable} ${mono.variable}`}>
+    <html lang="en" className={`${sans.variable} ${mono.variable} ${serif.variable}`}>
       <body>
         <header>
           <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
             <Link href="/" className="flex items-center gap-2.5">
               <span className="h-[15px] w-[15px] rounded-full bg-[var(--charcoal)]" />
-              <span className="text-[17px] font-bold tracking-tight">
+              <span className="serif text-[21px] italic tracking-tight">
                 gravity
               </span>
               <span className="label ml-1 hidden sm:inline">

@@ -14,10 +14,18 @@ export interface EvalResult {
 const SLOP: [RegExp, string][] = [
   [/game-?chang(er|ing)/i, "slop: 'game-changer'"],
   [/revolutioniz\w+/i, "slop: 'revolutionize'"],
-  [/leverage the power/i, "slop: 'leverage the power'"],
-  [/in today's (fast|digital|competitive)/i, "slop: 'in today's…' opener"],
+  [/\bleverag\w+/i, "slop: 'leverage'"],
+  [/\bunlock(s|ing|ed)?\b/i, "slop: 'unlock'"],
+  [/\bseamless\w*/i, "slop: 'seamless'"],
+  [/\bsupercharg\w+/i, "slop: 'supercharge'"],
+  [/\belevate your\b/i, "slop: 'elevate your'"],
+  [/excited to (share|announce)/i, "slop: 'excited to share'"],
+  [/hope this (email )?finds you/i, "slop: 'hope this finds you'"],
+  [/let'?s dive in/i, "slop: 'let's dive in'"],
+  [/it'?s not just [^.]+, it'?s/i, "slop: 'not just X, it's Y'"],
+  [/in today's (fast|digital|competitive|world|landscape)/i, "slop: 'in today's…' opener"],
   [/delve/i, "slop: 'delve'"],
-  [/🚀|✨|💯/u, "slop: hype emoji"],
+  [/🚀|✨|💯|🔥/u, "slop: hype emoji"],
 ];
 
 export function evalDraft(item: PlanItem, brain: CompanyBrain): EvalResult {

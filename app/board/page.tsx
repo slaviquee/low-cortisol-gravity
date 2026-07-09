@@ -107,7 +107,7 @@ export default function Pipeline() {
     <div className="space-y-6">
       <div className="flex items-end justify-between gap-4">
         <div>
-          <h1 className="text-[24px] font-semibold tracking-tight">pipeline</h1>
+          <h1 className="serif text-[30px]">pipeline</h1>
           {state.input.product_summary && (
             <p className="label mt-1 max-w-2xl normal-case">
               {state.input.product_summary}
@@ -386,7 +386,7 @@ export default function Pipeline() {
           style={meshStyle(w)}
         >
           <div className="relative z-10">
-            <h2 className="text-[22px] font-bold tracking-tight">warmth score</h2>
+            <h2 className="serif text-[26px] italic">warmth score</h2>
             <p className="mt-1 text-[11.5px] leading-relaxed text-white/85">
               every buyer&apos;s temperature, averaged — the panel itself runs
               colder or hotter with it

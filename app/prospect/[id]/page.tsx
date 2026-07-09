@@ -39,7 +39,7 @@ export default function Prospect({
         <div className="flex items-center gap-4">
           <ScoreRing score={p.gravity_score} size={56} />
           <div>
-            <h1 className="text-[24px] font-semibold tracking-tight">
+            <h1 className="serif text-[28px]">
               {p.prospect.name}
             </h1>
             <p className="label mt-0.5">

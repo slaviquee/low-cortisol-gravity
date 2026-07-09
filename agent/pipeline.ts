@@ -535,7 +535,7 @@ export async function reviseDraft(itemId: string, note: string): Promise<boolean
   if (item.draft) {
     draft = await think(
       "strategist",
-      `Revise this ${item.channel} ${item.type} draft per the user's note. Keep our tone of voice and the original angle.\n\nBRAIN:\n${brainDigest(brain)}\n\nDRAFT:\n${item.draft}\n\nUSER NOTE: ${note}\n\nReturn ONLY the revised draft.`,
+      `Revise this ${item.channel} ${item.type} draft per the user's note. Keep our tone of voice and the original angle.\n\nBRAIN:\n${brainDigest(brain)}\n\nDRAFT:\n${item.draft}\n\nUSER NOTE: ${note}\n\nReturn ONLY the revised draft. Human and casual; zero AI tells.`,
       { deep: true }
     );
   }
@@ -578,7 +578,7 @@ async function draftOutreach(
   if (model) {
     const text = await think(
       "radar",
-      `Prospect: ${name}, ${title}.\nTheir engagement: "${quote}"\nWorld model: ${JSON.stringify({ topics: model.topics, formats: model.formats })}\n\nReturn the email, then '---', then the connection note.`,
+      `Prospect: ${name}, ${title}.\nTheir engagement: "${quote}"\nWorld model: ${JSON.stringify({ topics: model.topics, formats: model.formats })}\n\nReturn the email, then '---', then the connection note. Human and casual; zero AI tells.`,
       { deep: true }
     );
     if (text) {
@@ -612,7 +612,7 @@ export async function draftPitchBrief(cardId: string): Promise<string> {
   if (model) {
     brief = await think(
       "radar",
-      `Create a tailored pitch brief (a compact deck outline, 5 sections max) for ${card.name}, ${card.title}. Their engagement with us: "${quote || "reacted to our post"}". World model: ${JSON.stringify({ topics: model.topics, formats: model.formats, behavior: model.behavior })}. Product: ${s.input.product_summary}. Open on THEIR words/stance, mirror the formats they reward, end with a 20-minute working-session ask. Plain text, numbered sections.`,
+      `Create a tailored pitch brief (a compact deck outline, 5 sections max) for ${card.name}, ${card.title}. Their engagement with us: "${quote || "reacted to our post"}". World model: ${JSON.stringify({ topics: model.topics, formats: model.formats, behavior: model.behavior })}. Product: ${s.input.product_summary}. Open on THEIR words/stance, mirror the formats they reward, end with a 20-minute working-session ask. Plain text, numbered sections. Human and casual; zero AI tells.`,
       { deep: true }
     );
   }

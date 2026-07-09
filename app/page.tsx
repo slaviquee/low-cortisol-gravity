@@ -105,7 +105,7 @@ function ScenePlan() {
       <p className="mono label rise">04 · it generates gravity, per cohort</p>
       <div className="mt-3 space-y-1.5">
         {[
-          ["→ post", "a tactical chart, for the chart skeptics", "eval 100"],
+          ["→ post", "a carousel chart, for the chart skeptics", "eval 100"],
           ["→ comment", "in the threads systems thinkers read", ""],
           ["→ connect", "third touch, never the first", ""],
         ].map(([t, d, e], i) => (
@@ -312,8 +312,8 @@ export default function Landing() {
         <GravityHero />
       </div>
 
-      <h1 className="mt-6 text-center text-[38px] font-semibold leading-[1.08] tracking-[-0.03em]">
-        Make your buyers discover you
+      <h1 className="serif mt-6 text-center text-[46px] leading-[1.05]">
+        Make your buyers <em>discover you</em>
         <br />
         before the first contact.
       </h1>

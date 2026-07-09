@@ -29,7 +29,7 @@ export default function Brain() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[26px] font-semibold tracking-tight">company brain</h1>
+        <h1 className="serif text-[30px]">company brain</h1>
         <p className="mono label mt-1">
           every decision carries its data · persists across runs
         </p>

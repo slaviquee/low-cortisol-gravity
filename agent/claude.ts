@@ -4,7 +4,9 @@
 import Anthropic from "@anthropic-ai/sdk";
 
 export const MODEL_FAST = "claude-sonnet-5"; // parallel prospect modelers
-export const MODEL_DEEP = "claude-opus-4-8"; // gravity-map synthesis + content
+// Fable writes every word a human will read — posts, comments, outreach,
+// pitch briefs — plus the gravity-map synthesis. Best writer, least slop.
+export const MODEL_DEEP = "claude-fable-5";
 
 let client: Anthropic | null = null;
 

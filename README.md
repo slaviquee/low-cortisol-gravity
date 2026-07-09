@@ -78,8 +78,12 @@ engager who was never on the target list).
 ## Stack
 
 - **Claude managed agents** — the crew (scout / listener / strategist /
-  radar) is defined via the Agent SDK's `options.agents` (sonnet modelers,
-  opus synthesis + content), running headless with schema-validated outputs;
+  radar) is defined via the Agent SDK's `options.agents`: sonnet runs the
+  parallel prospect modelers, **fable writes every human-facing word**
+  (posts, comments, outreach, pitch briefs) under an explicit anti-slop
+  contract baked into the prompts — casual, specific, zero AI tells, with
+  a banned-phrase eval gate behind it; headless with schema-validated
+  outputs;
   authenticates with an API key **or** the team's Claude subscription login
   (`claude setup-token`), with direct `@anthropic-ai/sdk` as fallback;
   sponsor MCPs connect through the same SDK
@@ -96,7 +100,8 @@ engager who was never on the target list).
 - **X API** (pay-per-use, ToS-cleanest X path) + **xAI** Agent Tools `x_search`
 - **HubSpot** — the pipe as input (open / closed-lost / won deals) ·
   **Gradium** — STT on the spoken web (podcasts, talks) for taste signals
-- Next.js 15 · TypeScript · Tailwind v4 · IBM Plex Mono + Instrument Serif
+- Next.js 15 · TypeScript · Tailwind v4 · Geist + IBM Plex Mono +
+  Instrument Serif accents
 
 ## Deploy
 
@@ -144,8 +149,8 @@ Sponsor APIs: [Anthropic Claude](https://www.anthropic.com) ·
 Third-party: [Apify](https://apify.com) + HarvestAPI & apidojo actors ·
 [xAI](https://x.ai) · [X API](https://docs.x.com) ·
 [Next.js](https://nextjs.org) · [Tailwind CSS](https://tailwindcss.com) ·
-Google Fonts (IBM Plex Mono, Instrument Serif). All fixture people and
-companies are fictional.
+Google Fonts (Geist, IBM Plex Mono, Instrument Serif). All fixture people
+and companies are fictional.
 
 Team: [@slaviquee](https://github.com/slaviquee) ·
 [@gibouu](https://github.com/gibouu) ·

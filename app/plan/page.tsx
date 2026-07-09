@@ -44,7 +44,7 @@ export default function Plan() {
     <div className="space-y-7">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-[26px] font-semibold tracking-tight">generate gravity</h1>
+          <h1 className="serif text-[30px]">generate gravity</h1>
           <p className="mono label mt-1">
             react → comment → follow → connect → outreach · the familiarity ladder
           </p>

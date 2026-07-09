@@ -41,14 +41,14 @@ export const CREW: Record<string, AgentDefinition> = {
       "Synthesizes the Gravity Map across world models and drafts the weekly gravity plan (posts, comments, micro-actions on the familiarity ladder).",
     prompt: `${GRAVITY_MAP_SYSTEM}\n\n${PLAN_SYSTEM}`,
     tools: [],
-    model: "opus",
+    model: "fable", // the writer — human-facing words come from Fable
   },
   radar: {
     description:
       "Drafts warm outreach that cites a prospect's actual engagement, and runs ICP-fit checks on unknown engagers.",
     prompt: `${OUTREACH_SYSTEM}\n\n${ICP_CHECK_SYSTEM}`,
     tools: [],
-    model: "opus",
+    model: "fable", // the writer — human-facing words come from Fable
   },
 };
 
