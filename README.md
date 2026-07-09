@@ -90,6 +90,22 @@ engager who was never on the target list).
   **Gradium** — STT on the spoken web (podcasts, talks) for taste signals
 - Next.js 15 · TypeScript · Tailwind v4 · IBM Plex Mono + Instrument Serif
 
+## Deploy
+
+State lives in local JSON files (`data/runtime/`) and the pipeline runs as
+in-process background work — perfect on a laptop, at odds with serverless.
+
+- **Zero-change deploy (recommended): Railway / Render / Fly.io** — any
+  long-running Node host. Connect the repo, set env vars, `npm run build &&
+  npm start`. File state, the fire-and-forget pipeline, and the Agent SDK
+  subprocess all just work.
+- **Demo from your machine:** `cloudflared tunnel --url http://localhost:3000`
+  gives a public URL in seconds, running on the box you already verified.
+- **Vercel needs adaptation:** swap `lib/store.ts` + `lib/brain.ts` for a
+  Redis/KV adapter (both hide behind small get/update functions), move
+  `runPipeline` behind Next's `after()`, and rely on the direct-SDK tier
+  instead of the Agent SDK subprocess. A couple of hours — not demo-day work.
+
 ## Ethics
 
 Public signals only (posts, public activity, follow lists) + licensed sponsor
