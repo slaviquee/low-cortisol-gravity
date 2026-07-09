@@ -98,19 +98,35 @@ engager who was never on the target list).
 
 ## Deploy
 
-State lives in local JSON files (`data/runtime/`) and the pipeline runs as
-in-process background work — perfect on a laptop, at odds with serverless.
+Production deploys are driven by `.github/workflows/deploy.yml`. Every push to
+`main` runs two CLI jobs:
 
-- **Zero-change deploy (recommended): Railway / Render / Fly.io** — any
-  long-running Node host. Connect the repo, set env vars, `npm run build &&
-  npm start`. File state, the fire-and-forget pipeline, and the Agent SDK
-  subprocess all just work.
-- **Demo from your machine:** `cloudflared tunnel --url http://localhost:3000`
-  gives a public URL in seconds, running on the box you already verified.
-- **Vercel needs adaptation:** swap `lib/store.ts` + `lib/brain.ts` for a
-  Redis/KV adapter (both hide behind small get/update functions), move
-  `runPipeline` behind Next's `after()`, and rely on the direct-SDK tier
-  instead of the Agent SDK subprocess. A couple of hours — not demo-day work.
+- **Vercel production** — `vercel pull`, `vercel build --prod`, then
+  `vercel deploy --prebuilt --prod`.
+- **Railway production** — `railway up` against the `gravity` service in
+  Guillaume DERAMCHI's personal Railway workspace.
+
+GitHub secrets required by the workflow:
+
+- `VERCEL_TOKEN`
+- `RAILWAY_API_TOKEN`
+
+Runtime API keys stay in the hosting providers, not in git. Configure these in
+both Vercel and Railway production environments as needed:
+
+- `ANTHROPIC_API_KEY`
+- `SILLAGE_API_KEY`
+- `FULLENRICH_API_KEY`
+- `APIFY_TOKEN`
+- `HUBSPOT_TOKEN`
+- `GRADIUM_API_KEY`
+
+Railway is the full long-running host: file state, background pipeline work,
+and the Agent SDK subprocess run normally. Vercel runs the public demo safely
+on serverless: state/brain writes use temporary storage, and `/api/run`,
+`/api/state`, and `/api/radar` serve the deterministic fixture flow. Use a
+durable store such as Redis/KV before relying on Vercel state across cold
+starts.
 
 ## Ethics
 
