@@ -300,12 +300,17 @@ const gravitySchema = {
 };
 
 function deriveCohorts(prospects: BuyerWorldModel[]): Cohort[] {
+  // A cohort key must be a taste label, not a sentence: when evidence is
+  // sparse the world model can emit caveat text in formats[] — anything
+  // longer than a short label buckets into "low-signal buyers" instead.
+  const label = (p: BuyerWorldModel): string => {
+    const f = (p.formats[0] ?? "").trim();
+    if (f && f.length <= 32 && f.split(/\s+/).length <= 4) return f;
+    return p.behavior === "lurker" ? "low-signal buyers" : "active buyers";
+  };
   const groups = new Map<string, Cohort>();
   for (const p of prospects) {
-    const key =
-      p.state === "low_orbit"
-        ? "quiet-execs"
-        : slug(p.formats[0] || p.behavior || "active-buyers");
+    const key = p.state === "low_orbit" ? "quiet-execs" : slug(label(p));
     const existing = groups.get(key);
     if (existing) {
       existing.members.push(p.id);
@@ -317,8 +322,8 @@ function deriveCohorts(prospects: BuyerWorldModel[]): Cohort[] {
       taste:
         p.state === "low_orbit"
           ? "quiet on socials — email/call after timed signal"
-          : p.formats[0]?.replaceAll("_", " ") || "active buyer signals",
-      format: p.formats[0] || "direct_touch",
+          : label(p).replaceAll("_", " "),
+      format: label(p) || "direct_touch",
       members: [p.id],
       engagements: 0,
       warm: 0,
