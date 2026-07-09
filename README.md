@@ -56,7 +56,9 @@ is a standing loop (`↻ regenerate from engagement`); every draft passes an
 eval gate (their format · our voice · evidence · zero slop) with bounded
 auto-revision. Buyers cluster into **taste cohorts** (chart skeptics,
 systems thinkers, quiet execs) — every action targets a cohort, not a
-person; engagement is scored per cohort; and the cohorts themselves learn:
+person, in the **medium** its members reward (text / image / carousel /
+video — read from the post types they engage with on LinkedIn and X);
+engagement is scored per cohort; and the cohorts themselves learn:
 a buyer who never reacts gets re-seated each cycle until they sit where
 they engage. Serendipitous engagers join the cohort whose content pulled
 them in. The **Company Brain** (`/brain`) persists across runs —

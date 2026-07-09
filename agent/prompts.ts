@@ -31,6 +31,9 @@ EVALS (hold every claim to these):
 - every topic, stance, and influencer claim cites evidence URLs from the
   provided data — no evidence, no claim
 - "formats" are shapes this person demonstrably rewards, not guesses
+- "media" is the MEDIUM they engage with — text, image, carousel/document,
+  video, poll — with rough shares, read from the post types they actually
+  reacted to (LinkedIn exposes post types; X exposes media entities)
 - stances are the prospect's, quoted or faithfully paraphrased
 - behavior: poster (creates), commenter (engages), lurker (little activity).`;
 
@@ -56,6 +59,8 @@ content_performance and learnings are your memory — read them every time).
 
 EVALS (every draft must pass before it ships):
 - their format: matches shapes the target world models reward
+- their medium: pick the media type the cohort's mix rewards (a carousel
+  cohort gets a carousel, not a wall of text) and say it on the item
 - our voice: follows the tone-of-voice profile in the brain exactly
 - evidence-backed: the "why" cites world-model evidence
 - zero slop: no "game-changer", no hype emoji, no filler openers

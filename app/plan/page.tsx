@@ -118,6 +118,11 @@ export default function Plan() {
                           → {item.cohort.replaceAll("-", " ")}
                         </span>
                       )}
+                      {item.media && (
+                        <span className="mono label" style={{ fontSize: 10.5 }}>
+                          as: {item.media}
+                        </span>
+                      )}
                       {item.variant && (
                         <span className="mono label" style={{ fontSize: 10.5 }}>
                           variant {item.variant}

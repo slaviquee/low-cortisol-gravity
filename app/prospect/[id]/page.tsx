@@ -7,6 +7,7 @@ import { use } from "react";
 import {
   Evidence,
   HeatBar,
+  MediaBar,
   ScoreRing,
   StateChip,
   usePolledState,
@@ -85,6 +86,11 @@ export default function Prospect({
                   </span>
                 ))}
               </div>
+              {p.media.length > 0 && (
+                <div className="mt-2.5 max-w-[210px]">
+                  <MediaBar mix={p.media} />
+                </div>
+              )}
             </div>
             <div>
               <p className="mono text-[10.5px] text-[var(--yellow)]">punishes</p>

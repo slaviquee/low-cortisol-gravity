@@ -35,6 +35,16 @@ export interface Influencer {
   evidence: string[];
 }
 
+// The MEDIUM a buyer rewards — LinkedIn exposes post types (text, image,
+// document/carousel, video, poll); X exposes media entities. Analyzed from
+// what they engage with, not what they claim.
+export type MediaKind = "text" | "image" | "carousel" | "video" | "poll";
+
+export interface MediaTaste {
+  kind: MediaKind;
+  share: number; // 0..1 of their engagements on this medium
+}
+
 export interface EngagementEvent {
   post_id: string;
   kind: "reaction" | "comment";
@@ -55,6 +65,7 @@ export interface BuyerWorldModel {
   signals: Signal[];
   topics: Topic[];
   formats: string[]; // what they reward
+  media: MediaTaste[]; // which media types they engage with
   influencers: Influencer[];
   behavior: Behavior;
   gravity_score: number; // rises per engagement event
@@ -83,6 +94,7 @@ export interface PlanItem {
   link?: string; // deep link the human clicks (profile, post)
   variant?: "A" | "B";
   cohort?: string; // which taste cohort this action targets
+  media?: string; // the medium chosen for the cohort (carousel, text, …)
   done: boolean;
   eval?: { score: number; notes: string[] }; // the quality gate's verdict
   user_note?: string; // human steering — becomes a brain learning

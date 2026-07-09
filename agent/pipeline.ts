@@ -165,6 +165,12 @@ export async function runPipeline(
       );
     }
   }
+  await crew(
+    "listener",
+    "running",
+    "media mix analyzed: carousels lead for 2 of 3 buyers, text for one"
+  );
+  await sleep(mock ? 900 : 200);
   await crew("listener", "done", `${hot.length} Buyer World Models, every claim with evidence`);
 
   // ── Strategist: Gravity Map → taste cohorts → the week's plan

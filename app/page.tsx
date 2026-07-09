@@ -75,9 +75,9 @@ function SceneCrm() {
 
 function SceneTaste() {
   const rows = [
-    { role: "vp sales", taste: "rewards tactical charts · hates spam", heat: 89 },
-    { role: "cro", taste: "contrarian, numbers-first", heat: 71 },
-    { role: "head of revops", taste: "diagrams · workflow breakdowns", heat: 64 },
+    { role: "vp sales", taste: "tactical charts, as carousels · hates spam", heat: 89 },
+    { role: "cro", taste: "contrarian short text, numbers-first", heat: 71 },
+    { role: "head of revops", taste: "workflow breakdowns · carousels + video", heat: 64 },
   ];
   return (
     <div>

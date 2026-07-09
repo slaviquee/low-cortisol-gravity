@@ -74,6 +74,11 @@ export function fixtureProspects(): BuyerWorldModel[] {
         },
       ],
       formats: ["tactical_charts", "numbered_lists", "contrarian_takes"],
+      media: [
+        { kind: "carousel", share: 0.45 },
+        { kind: "image", share: 0.35 },
+        { kind: "text", share: 0.2 },
+      ],
       influencers: [
         {
           name: "J. Founder (OutboundWire)",
@@ -119,6 +124,11 @@ export function fixtureProspects(): BuyerWorldModel[] {
         },
       ],
       formats: ["short_contrarian_posts", "before_after_numbers"],
+      media: [
+        { kind: "text", share: 0.55 },
+        { kind: "image", share: 0.3 },
+        { kind: "video", share: 0.15 },
+      ],
       influencers: [
         {
           name: "J. Founder (OutboundWire)",
@@ -158,6 +168,11 @@ export function fixtureProspects(): BuyerWorldModel[] {
         },
       ],
       formats: ["diagrams", "step_by_step_threads"],
+      media: [
+        { kind: "carousel", share: 0.5 },
+        { kind: "video", share: 0.3 },
+        { kind: "text", share: 0.2 },
+      ],
       influencers: [
         {
           name: "Mara Vidal (RevOps Weekly)",
@@ -186,6 +201,7 @@ export function fixtureProspects(): BuyerWorldModel[] {
       ],
       topics: [],
       formats: [],
+      media: [],
       influencers: [],
       behavior: "lurker",
       gravity_score: 0,
@@ -206,6 +222,7 @@ export function fixtureProspects(): BuyerWorldModel[] {
       signals: [],
       topics: [],
       formats: [],
+      media: [],
       influencers: [],
       behavior: "lurker",
       gravity_score: 0,
@@ -295,6 +312,7 @@ export function fixturePlan(): PlanItem[] {
     {
       id: "p-tue-post",
       cohort: "chart-skeptics",
+      media: "image (chart)",
       day: "Tue",
       type: "post",
       channel: "linkedin",
@@ -335,6 +353,7 @@ export function fixturePlan(): PlanItem[] {
     {
       id: "p-wed-post-x",
       cohort: "chart-skeptics",
+      media: "text",
       day: "Wed",
       type: "post",
       channel: "x",
@@ -383,6 +402,7 @@ export function fixturePlanV2(): PlanItem[] {
     {
       id: "p2-post-followup",
       cohort: "chart-skeptics",
+      media: "carousel",
       day: "Mon",
       type: "post",
       channel: "linkedin",

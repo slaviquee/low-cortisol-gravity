@@ -10,8 +10,10 @@ import {
   CrewStrip,
   DotTrace,
   Stat,
+  MediaBar,
   TempLegend,
   TempSwatch,
+  cohortMediaMix,
   meshStyle,
   postTemp,
   prospectTemp,
@@ -174,6 +176,11 @@ export default function Pipeline() {
                       </span>
                     )}
                   </div>
+                  {cohortMediaMix(c, state.prospects).length > 0 && (
+                    <div className="mt-2.5">
+                      <MediaBar mix={cohortMediaMix(c, state.prospects)} />
+                    </div>
+                  )}
                   <div className="mt-2.5 h-[3px] w-full overflow-hidden rounded-full bg-[var(--card-deep)]">
                     <div
                       className="h-full rounded-full"

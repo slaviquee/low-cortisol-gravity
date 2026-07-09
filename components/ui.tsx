@@ -5,7 +5,16 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRef } from "react";
-import { AppState, BuyerWorldModel, CrewStatus, LogLine, ProspectState } from "@/lib/types";
+import {
+  AppState,
+  BuyerWorldModel,
+  Cohort,
+  CrewStatus,
+  LogLine,
+  MediaKind,
+  MediaTaste,
+  ProspectState,
+} from "@/lib/types";
 
 export const STATE_COLOR: Record<ProspectState, string> = {
   cold: "var(--faint)",
@@ -382,6 +391,67 @@ export function meshStyle(t: number): React.CSSProperties {
       `radial-gradient(26% 26% at 18% 78%, ${rgba(c(6), 0.8)} 0%, transparent 66%)`,
     ].join(", "),
   } as React.CSSProperties;
+}
+
+/* ── media taste — WHICH medium they engage with (text/image/carousel/…) ── */
+
+const MEDIA_COLOR: Record<MediaKind, string> = {
+  carousel: "#292926",
+  image: "#8f8f88",
+  video: "#adada5",
+  text: "#cbcac4",
+  poll: "#ddb02c",
+};
+
+export function MediaBar({
+  mix,
+  label = true,
+}: {
+  mix: MediaTaste[];
+  label?: boolean;
+}) {
+  if (!mix.length) return null;
+  const sorted = [...mix].sort((a, b) => b.share - a.share);
+  return (
+    <div>
+      <div className="flex h-[4px] w-full gap-[2px] overflow-hidden rounded-full">
+        {sorted.map((m) => (
+          <span
+            key={m.kind}
+            title={`${m.kind} ${Math.round(m.share * 100)}%`}
+            className="h-full rounded-full"
+            style={{
+              width: `${m.share * 100}%`,
+              background: MEDIA_COLOR[m.kind],
+              transition: "width 600ms",
+            }}
+          />
+        ))}
+      </div>
+      {label && (
+        <p className="mono mt-1 text-[10px] text-[var(--muted)]">
+          {sorted.map((m) => `${m.kind} ${Math.round(m.share * 100)}`).join(" · ")}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// A cohort's media taste = its members', averaged.
+export function cohortMediaMix(
+  c: Cohort,
+  prospects: BuyerWorldModel[]
+): MediaTaste[] {
+  const acc: Partial<Record<MediaKind, number>> = {};
+  for (const id of c.members) {
+    const p = prospects.find((x) => x.id === id);
+    for (const m of p?.media ?? []) acc[m.kind] = (acc[m.kind] ?? 0) + m.share;
+  }
+  const total = Object.values(acc).reduce((s, v) => s + (v ?? 0), 0);
+  if (!total) return [];
+  return (Object.entries(acc) as [MediaKind, number][])
+    .map(([kind, sum]) => ({ kind, share: sum / total }))
+    .sort((a, b) => b.share - a.share);
 }
 
 export function TempSwatch({ t, title }: { t: number; title?: string }) {
