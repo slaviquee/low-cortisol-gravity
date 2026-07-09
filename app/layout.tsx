@@ -38,16 +38,7 @@ export default function RootLayout({
         <header>
           <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
             <Link href="/" className="flex items-center gap-2.5">
-              <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden>
-                <circle cx="12" cy="12" r="7" fill="var(--charcoal)" />
-                <circle r="1.7" fill="var(--ink)">
-                  <animateMotion
-                    dur="7s"
-                    repeatCount="indefinite"
-                    path="M 22.5 12 A 10.5 10.5 0 1 1 1.5 12 A 10.5 10.5 0 1 1 22.5 12"
-                  />
-                </circle>
-              </svg>
+              <span className="h-[15px] w-[15px] rounded-full bg-[var(--charcoal)]" />
               <span className="text-[17px] font-bold tracking-tight">
                 gravity
               </span>

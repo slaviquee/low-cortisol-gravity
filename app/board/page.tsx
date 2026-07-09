@@ -9,7 +9,7 @@ import {
   CopyBtn,
   CrewStrip,
   DotTrace,
-  GravityWell,
+  Stat,
   TempLegend,
   TempSwatch,
   postTemp,
@@ -131,7 +131,7 @@ export default function Pipeline() {
         {/* ── 01 · map buyers ─────────────────────────────── */}
         <section className="min-w-0">
           <ColHeader n="01" title="map buyers" />
-          <GravityWell
+          <Stat
             value={intentDensity}
             label="intent density"
             display={intentDensity.toFixed(3)}
@@ -181,7 +181,7 @@ export default function Pipeline() {
         {/* ── 02 · generate gravity ───────────────────────── */}
         <section className="min-w-0">
           <ColHeader n="02" title="generate gravity" href="/plan" hrefLabel="full plan" />
-          <GravityWell
+          <Stat
             value={planProgress}
             label="plan executed"
             display={`${planDone}/${state.plan.length || "—"}`}
@@ -240,7 +240,7 @@ export default function Pipeline() {
         {/* ── 03 · track engagement ───────────────────────── */}
         <section className="min-w-0">
           <ColHeader n="03" title="track engagement" href="/warm" hrefLabel="warm queue" />
-          <GravityWell
+          <Stat
             value={warmRate}
             label="warm rate"
             display={`${Math.round(warmRate * 100)}%`}

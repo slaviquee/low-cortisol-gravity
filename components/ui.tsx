@@ -80,10 +80,9 @@ function orbitPath(cx: number, cy: number, rx: number, ry: number) {
   return `M ${cx + rx} ${cy} A ${rx} ${ry} 0 1 1 ${cx - rx} ${cy} A ${rx} ${ry} 0 1 1 ${cx + rx} ${cy}`;
 }
 
-// A gravity well: black mass, dotted orbit with live bodies, and the value
-// as a captured arc around the mass — matter pulled in, not a clock.
-export function GravityWell({
-  value, // 0..1 → how much of the orbit is captured
+// Minimal functional metric — label, mono value, thin magnitude bar.
+export function Stat({
+  value, // 0..1
   label,
   display,
 }: {
@@ -91,57 +90,22 @@ export function GravityWell({
   label: string;
   display: string;
 }) {
-  const v = Math.max(0.02, Math.min(1, value));
-  const arcR = 34;
-  const c = 2 * Math.PI * arcR;
   return (
-    <div className="rise flex flex-col items-center">
-      <svg width="160" height="112" viewBox="0 0 160 112">
-        <ellipse
-          cx="80"
-          cy="56"
-          rx="73"
-          ry="47"
-          fill="none"
-          stroke="var(--faint)"
-          strokeWidth="1"
-          strokeDasharray="2 5"
+    <div className="py-3">
+      <p className="label">{label}</p>
+      <p className="mono mt-1 text-[22px] font-medium tracking-tight">
+        {display}
+      </p>
+      <div className="mt-2 h-[3px] w-full max-w-[120px] overflow-hidden rounded-full bg-[var(--card-deep)]">
+        <div
+          className="h-full rounded-full"
+          style={{
+            width: `${Math.max(0, Math.min(1, value)) * 100}%`,
+            background: "var(--accent)",
+            transition: "width 800ms cubic-bezier(.2,.7,.2,1)",
+          }}
         />
-        {/* captured arc — the gauge */}
-        <circle
-          cx="80"
-          cy="56"
-          r={arcR}
-          fill="none"
-          stroke="var(--accent)"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeDasharray={c}
-          strokeDashoffset={c * (1 - v)}
-          transform="rotate(-90 80 56)"
-          style={{ transition: "stroke-dashoffset 900ms cubic-bezier(.2,.7,.2,1)" }}
-        />
-        {/* the mass */}
-        <circle cx="80" cy="56" r="26" fill="var(--charcoal)" />
-        {/* orbiting bodies */}
-        <circle r="2.6" fill="var(--ink)">
-          <animateMotion
-            dur="9s"
-            repeatCount="indefinite"
-            path={orbitPath(80, 56, 73, 47)}
-          />
-        </circle>
-        <circle r="1.9" fill="#e8a13d">
-          <animateMotion
-            dur="15s"
-            begin="-6s"
-            repeatCount="indefinite"
-            path={orbitPath(80, 56, 73, 47)}
-          />
-        </circle>
-      </svg>
-      <p className="label mt-1.5">{label}</p>
-      <p className="mono mt-0.5 text-[15px] font-medium">{display}</p>
+      </div>
     </div>
   );
 }
