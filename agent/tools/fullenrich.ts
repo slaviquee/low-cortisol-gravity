@@ -47,29 +47,29 @@ export async function searchPeople(
     });
     if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
     const data = await res.json();
-    // verified live: rows under `people`; title inside `employment`;
-    // linkedin inside `social_profiles`
+    // verified live: rows under `people`; employment = { current, all };
+    // linkedin at social_profiles.professional_network.url
     const rows = data.people ?? data.data ?? data.results ?? data.items ?? [];
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return rows.map((p: any) => {
-      const emp = Array.isArray(p.employment) ? p.employment[0] : p.employment;
-      const socials = Array.isArray(p.social_profiles)
-        ? p.social_profiles
-        : Object.entries(p.social_profiles ?? {}).map(([k, v]) => ({
-            type: k,
-            url: v,
-          }));
-      const li = socials.find((s: { type?: string; network?: string; url?: string }) =>
-        /linkedin/i.test(`${s?.type ?? ""} ${s?.network ?? ""} ${s?.url ?? ""}`)
-      );
+      const emp =
+        p.employment?.current ??
+        (Array.isArray(p.employment) ? p.employment[0] : p.employment);
       return {
         name:
-          p.full_name ??
-          [p.first_name, p.last_name].filter(Boolean).join(" ") ??
+          p.full_name ||
+          [p.first_name, p.last_name].filter(Boolean).join(" ") ||
           "",
-        title: emp?.title ?? emp?.position ?? p.title ?? "",
-        company: emp?.company_name ?? emp?.company ?? companyDomain,
-        linkedin_url: (typeof li?.url === "string" ? li.url : "") || p.linkedin_url || "",
+        title: emp?.title ?? emp?.position ?? emp?.job_title ?? "",
+        company:
+          emp?.company?.name ||
+          emp?.company_name ||
+          (typeof emp?.company === "string" ? emp.company : "") ||
+          companyDomain,
+        linkedin_url:
+          p.social_profiles?.professional_network?.url ??
+          p.linkedin_url ??
+          "",
       };
     });
   } catch (err) {
