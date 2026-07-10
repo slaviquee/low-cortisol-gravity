@@ -1,5 +1,9 @@
 # Gravity
 
+🏆 **First place at the Agentic GTM Hackathon** by **Anthropic, Iterate, Sillage, and FullEnrich** — Station F, Paris, July 2026.
+
+**Live:** [buildgravity.co](https://buildgravity.co) — currently in waitlist mode while we prepare the first orbits. Run it locally (below) to use the full product.
+
 > Build enough relevance that your buyers discover you before you discover them.
 
 Gravity is a GTM agent that builds familiarity before outreach. Instead of
@@ -8,7 +12,7 @@ Gravity starts earlier: it maps the public information bubble around target
 buyers, creates content and micro-actions that put your company inside that
 bubble, and only drafts outreach once the buyer engages.
 
-Presenter line:
+One line:
 
 > **Gravity makes outreach warm before it is sent.**
 
@@ -21,9 +25,14 @@ and see one buyer flip Warm before FullEnrich runs.
 
 ```bash
 npm install
-GRAVITY_MOCK=1 npm run dev
+GRAVITY_MOCK=1 npm run dev   # deterministic stage demo, zero keys needed
+# npm run dev                # full live mode when provider keys are set
 # http://localhost:3000
 ```
+
+In dev you get the complete app (pipeline, plan, warm queue, brain, site
+switcher). The public deployment hides those pages behind the waitlist —
+that's a production-only middleware, not a fork.
 
 ---
 
@@ -102,8 +111,9 @@ The core claim:
 | Website-to-ICP Scout | Reads the seller website and produces product narrative, ICP, voice, and buyer personas | Built |
 | Claude managed agent crew | Scout, Resolver, Listener, Strategist, and Radar coordinate the GTM loop | Built |
 | Sillage account setup | Pushes ICP and account list into Sillage REST path when keys exist | Built |
-| Sillage signal story | Uses Sillage as the discovery layer for timing, accounts, mappings, and buying moments | Built / graceful fallback |
-| FullEnrich identity search | Finds named buyers when live keys exist | Built / mocked |
+| Sillage signal story | Persona + accounts push, company mappings, signal runs and signal reads via the documented REST API | Built / graceful fallback |
+| FullEnrich identity search | Finds named buyers (live-verified: resolved real GTM leaders during the hackathon) | Built / live |
+| Agentic account discovery | With no usable targets, the resolver proposes real target companies from the ICP and retries broad titles before ever showing fixtures | Built |
 | Buyer World Model schema | One evidence-backed model read by board, plan, warm queue, and pitch brief | Built |
 | Evidence drawer | Every topic/stance/influencer claim has URLs | Built |
 | Gradium spoken-web layer | Finds/transcribes public talks or podcasts and mines them for taste signals | Built / key gated |
@@ -113,6 +123,10 @@ The core claim:
 | Warm queue | Triggers when buyer comments once or reacts twice | Built |
 | FullEnrich just-in-time contact | Buys contact data only after warmth | Built / mocked |
 | Gamma-ready pitch brief | Creates a compact deck outline and opens Gamma for asset creation | Built |
+| Multi-site switcher | Every analyzed website is a snapshot world; one click flips the whole app between companies | Built |
+| Demo seed roster | 6 switchable worlds — 3 real-data (buildgravity, Anthropic, Sillage) + 3 fictional — materialized on boot | Built |
+| Company Brain | Per-site memory: narrative, ICP, tone of voice, decisions-with-reasons, content performance, steering notes | Built |
+| Waitlist mode | Public deployment is a waitlist landing (persistent volume + log trail); full app stays available in dev | Built |
 | Live LinkedIn auto-actions | Not shipped; intentionally human-in-the-loop | Not built |
 | Gamma API deck creation | Planned direct integration; current build creates Gamma-ready briefs/assets | Roadmap |
 
@@ -552,6 +566,24 @@ Default target domains:
 ["gamma.app", "nabla.com", "airtable.com", "foundever.com", "edenred.com"]
 ```
 
+### Seeded demo worlds
+
+On first boot the app materializes six switchable company worlds
+([`data/demo-companies-real.ts`](data/demo-companies-real.ts),
+[`data/demo-companies.ts`](data/demo-companies.ts)) — pick any of them from
+the header switcher:
+
+- **3 real-data worlds** — buildgravity.co (real Anthropic sales leaders and
+  Sillage's founders as prospects, the real launch post, its real commenters
+  in the warm queue), anthropic.com, and getsillage.com. Every name, title,
+  LinkedIn URL, topic, and evidence link is real public data.
+- **3 fictional worlds** — Northwind Robotics, Cadence Health, Ledgerline —
+  fully invented end-to-end (people, emails, phones) for safe deep-dives.
+
+Integrity rule: real people never get fabricated private data. Real
+engagers show no email until enrichment actually runs; only the generated
+drafts around them are illustrative.
+
 ## Customer Lead Research
 
 The branch also includes customer-side lead research for the judge/mentor
@@ -605,7 +637,8 @@ layers independently.
 | `GRADIUM_API_KEY` | Audio transcription for public talks/podcasts |
 | `APIFY_TOKEN` | Live LinkedIn post/activity scans |
 | `XAI_API_KEY` | Web/X discovery for public appearances and X search |
-| `HUBSPOT_TOKEN` | CRM pipe as input |
+| `X_API_KEY` | X API fallback for timelines/follows when Apify is absent |
+| `HUBSPOT_TOKEN` | CRM pipe as input (deal accounts merge into targeting) |
 
 ---
 
@@ -616,17 +649,20 @@ npm install
 GRAVITY_MOCK=1 npm run dev
 ```
 
-Open <http://localhost:3000>.
+Open <http://localhost:3000>. (In dev the full app is available; the public
+deployment shows only the waitlist landing — see `middleware.ts`.)
 
 Recommended click path:
 
-1. Paste or keep the default website.
-2. Load the five cached target accounts.
-3. Open `/board` and inspect the buyer world models.
-4. Open `/plan` and show the five-day familiarity plan.
-5. Open `/warm` and click `scan engagement`.
-6. Show Margaux or Olivia flipping Warm.
-7. Show FullEnrich just-in-time and the Gamma-ready pitch brief.
+1. Pick a world from the header switcher (buildgravity.co is the hero), or
+   paste a website to build a fresh one.
+2. Open `/board` and inspect the buyer world models and taste cohorts.
+3. Open `/plan` and show the five-day familiarity plan with eval scores —
+   revise any draft with a note (`✎`) and watch the note become a rule.
+4. Open `/warm` and click `scan engagement`.
+5. Show a buyer flipping Warm → FullEnrich just-in-time → the Gamma-ready
+   pitch brief and call script.
+6. Open `/brain` — decisions with reasons, tone of voice, what converts.
 
 ---
 
@@ -660,6 +696,11 @@ This is a relevance engine, not a surveillance engine.
 ---
 
 ## Credits
+
+🏆 Winner — first place at the **Agentic GTM Hackathon** hosted by
+[Anthropic](https://www.anthropic.com), [Iterate](https://www.iterate.com/),
+[Sillage](https://www.getsillage.com/), and
+[FullEnrich](https://fullenrich.com/) at Station F, Paris (July 2026).
 
 Sponsor APIs: [Anthropic Claude](https://www.anthropic.com) ·
 [Sillage](https://www.getsillage.com/) · [FullEnrich](https://fullenrich.com/) ·

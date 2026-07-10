@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, IBM_Plex_Mono, Instrument_Serif } from "next/font/google";
 import Link from "next/link";
+import SiteSwitcher from "@/components/site-switcher";
 import "./globals.css";
 
 const sans = Geist({
@@ -30,9 +31,17 @@ export const metadata: Metadata = {
     "Build enough relevance that your buyers discover you before you discover them.",
 };
 
-// Waitlist mode: app pages are hidden (middleware redirects them home),
-// so the header carries no nav. Restore NAV + SiteSwitcher to bring back.
-const NAV: { href: string; label: string }[] = [];
+// Waitlist mode is production-only (middleware): the public site shows the
+// landing + a "coming soon" chip, while dev keeps the full app nav.
+const WAITLIST_ONLY = process.env.NODE_ENV === "production";
+const NAV: { href: string; label: string }[] = WAITLIST_ONLY
+  ? []
+  : [
+      { href: "/board", label: "pipeline" },
+      { href: "/plan", label: "plan" },
+      { href: "/warm", label: "warm queue" },
+      { href: "/brain", label: "brain" },
+    ];
 
 export default function RootLayout({
   children,
@@ -54,6 +63,7 @@ export default function RootLayout({
               </span>
             </Link>
             <nav className="flex items-center gap-6">
+              {!WAITLIST_ONLY && <SiteSwitcher />}
               {NAV.map((n) => (
                 <Link key={n.href} href={n.href} className="group flex items-center gap-1.5 text-[13px]">
                   <span className="arr text-[var(--accent)]">→</span>
@@ -62,13 +72,15 @@ export default function RootLayout({
                   </span>
                 </Link>
               ))}
-              <span className="label flex items-center gap-2">
-                <span
-                  className="pulse h-[7px] w-[7px] rounded-full"
-                  style={{ background: "var(--accent)" }}
-                />
-                coming soon
-              </span>
+              {WAITLIST_ONLY && (
+                <span className="label flex items-center gap-2">
+                  <span
+                    className="pulse h-[7px] w-[7px] rounded-full"
+                    style={{ background: "var(--accent)" }}
+                  />
+                  coming soon
+                </span>
+              )}
             </nav>
           </div>
         </header>
