@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, IBM_Plex_Mono, Instrument_Serif } from "next/font/google";
 import Link from "next/link";
-import SiteSwitcher from "@/components/site-switcher";
 import "./globals.css";
 
 const sans = Geist({
@@ -31,12 +30,9 @@ export const metadata: Metadata = {
     "Build enough relevance that your buyers discover you before you discover them.",
 };
 
-const NAV = [
-  { href: "/board", label: "pipeline" },
-  { href: "/plan", label: "plan" },
-  { href: "/warm", label: "warm queue" },
-  { href: "/brain", label: "brain" },
-];
+// Waitlist mode: app pages are hidden (middleware redirects them home),
+// so the header carries no nav. Restore NAV + SiteSwitcher to bring back.
+const NAV: { href: string; label: string }[] = [];
 
 export default function RootLayout({
   children,
@@ -58,7 +54,6 @@ export default function RootLayout({
               </span>
             </Link>
             <nav className="flex items-center gap-6">
-              <SiteSwitcher />
               {NAV.map((n) => (
                 <Link key={n.href} href={n.href} className="group flex items-center gap-1.5 text-[13px]">
                   <span className="arr text-[var(--accent)]">→</span>

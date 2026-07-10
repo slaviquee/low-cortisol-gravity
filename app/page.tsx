@@ -1,17 +1,9 @@
 "use client";
 
-// LANDING — problem → solution → one input → how it works (on a loop).
+// LANDING — problem → solution → waitlist → how it works (on a loop).
 
-import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-import {
-  GravityHero,
-  HeatBar,
-  LogStream,
-  TempSwatch,
-} from "@/components/ui";
-import { FIXTURE_TARGETS, FIXTURE_WEBSITE } from "@/data/fixtures";
-import { LogLine } from "@/lib/types";
+import { useEffect, useState } from "react";
+import { GravityHero, TempSwatch } from "@/components/ui";
 
 /* ── how it works — five abstract beats, explicitly a loop ── */
 
@@ -221,97 +213,84 @@ function Partners() {
 
 /* ── the page ── */
 
-export default function Landing() {
-  const router = useRouter();
-  const [website, setWebsite] = useState("");
-  const [targets, setTargets] = useState("");
-  const [ownHandles, setOwnHandles] = useState("");
-  const [summary, setSummary] = useState("");
-  const [scouting, setScouting] = useState(false);
-  const [runError, setRunError] = useState("");
-  const [phase, setPhase] = useState<"form" | "thinking">("form");
-  const [showStep2, setShowStep2] = useState(false);
-  const [log, setLog] = useState<LogLine[]>([]);
-  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+function WaitlistForm() {
+  const [email, setEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [joined, setJoined] = useState<{ position: number; already: boolean } | null>(null);
 
-  async function scout() {
-    setScouting(true);
+  async function join() {
+    const value = email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value)) {
+      setError("that doesn't look like an email — one more try?");
+      return;
+    }
+    setError("");
+    setBusy(true);
     try {
-      const res = await fetch("/api/scout", {
+      const res = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ website: website || FIXTURE_WEBSITE }),
+        body: JSON.stringify({ email: value }),
       });
-      const data = res.ok ? await res.json() : null;
-      if (typeof data?.summary === "string") setSummary(data.summary);
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error ?? "failed");
+      setJoined({ position: data.position, already: Boolean(data.already) });
     } catch {
-      // scout is a nicety — stay quiet, the run itself re-reads the site
+      setError("couldn't reach the waitlist — give it another try in a moment.");
     } finally {
-      setScouting(false);
+      setBusy(false);
     }
   }
 
-  async function build() {
-    setShowStep2(false);
-    setRunError("");
-    setPhase("thinking");
-    try {
-      const res = await fetch("/api/run", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          website: website || FIXTURE_WEBSITE,
-          own_handles: ownHandles,
-          targets: targets
-            .split(/[\n,]/)
-            .map((t) => t.trim())
-            .filter(Boolean),
-        }),
-      });
-      if (!res.ok) throw new Error(`run failed (${res.status})`);
-    } catch {
-      // back to the form — never redirect to an empty board
-      setPhase("form");
-      setRunError("couldn't start the analysis — give it another try in a moment.");
-    }
-  }
-
-  useEffect(() => {
-    if (phase !== "thinking") return;
-    const poll = setInterval(async () => {
-      try {
-        const s = await fetch("/api/state", { cache: "no-store" }).then((r) => r.json());
-        setLog(s.log ?? []);
-      } catch {}
-    }, 550);
-    timers.current.push(setTimeout(() => router.push("/board"), 5200));
-    return () => {
-      clearInterval(poll);
-      timers.current.forEach(clearTimeout);
-    };
-  }, [phase, router]);
-
-  if (phase === "thinking") {
+  if (joined) {
     return (
-      <div className="rise mx-auto max-w-2xl pt-6">
-        <GravityHero />
-        <div className="mx-auto mt-8 max-w-md">
-          <p className="mono text-center text-[13px]">building your buyers&apos; world…</p>
-          <div className="card mt-5 min-h-[132px] p-5">
-            {log.length === 0 ? (
-              <p className="label pulse">the crew is waking up…</p>
-            ) : (
-              <LogStream log={log} max={5} />
-            )}
-          </div>
-          <p className="label mt-3 text-center" style={{ fontSize: 11.5 }}>
-            scout → resolver → listener → strategist → radar
-          </p>
-        </div>
+      <div className="pop card-paper mt-8 p-4 text-center">
+        <p className="mono text-[13px] font-medium text-[var(--accent)]">
+          {joined.already ? "✓ you're already in orbit" : "✓ you're in orbit"}
+        </p>
+        <p className="mono mt-1.5 text-[12px] text-[var(--muted)]">
+          {joined.already
+            ? `still holding your place — #${joined.position} in line.`
+            : `#${joined.position} in line. we'll open the doors to the first orbits soon.`}
+        </p>
       </div>
     );
   }
 
+  return (
+    <>
+      <div className="mt-8 flex gap-2">
+        <input
+          className="input"
+          type="email"
+          placeholder="you@company.com"
+          autoComplete="email"
+          value={email}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            if (error) setError("");
+          }}
+          onKeyDown={(e) => e.key === "Enter" && !busy && join()}
+        />
+        <button className="btn shrink-0 px-5" disabled={busy} onClick={join}>
+          <span className="arr">→</span> {busy ? "joining…" : "join the waitlist"}
+        </button>
+      </div>
+      {error ? (
+        <p className="rise mono mt-3 text-center text-[12px]" style={{ color: "#b3532f" }}>
+          {error}
+        </p>
+      ) : (
+        <p className="label mt-3 text-center" style={{ fontSize: 11.5 }}>
+          early access · rolling invites · no spam, one email when doors open
+        </p>
+      )}
+    </>
+  );
+}
+
+export default function Landing() {
   return (
     <div className="rise mx-auto max-w-xl pt-4">
       <div className="relative">
@@ -329,39 +308,7 @@ export default function Landing() {
         before the first contact.
       </h1>
 
-      <div className="mt-8 flex gap-2">
-        <input
-          className="input"
-          placeholder={`your website — ${FIXTURE_WEBSITE}`}
-          value={website}
-          onChange={(e) => setWebsite(e.target.value)}
-          onBlur={() => website && scout()}
-          onKeyDown={(e) => e.key === "Enter" && setShowStep2(true)}
-        />
-        <button className="btn shrink-0 px-5" onClick={() => setShowStep2(true)}>
-          <span className="arr">→</span> build gravity
-        </button>
-      </div>
-
-      {runError && (
-        <p
-          className="rise mono mt-3 text-center text-[12px]"
-          style={{ color: "#b3532f" }}
-        >
-          {runError}
-        </p>
-      )}
-
-      {(summary || scouting) && (
-        <div className="rise card-paper mt-3 p-3.5">
-          <p className="link-green text-[12px]">
-            <span className="arr">→</span> scout
-          </p>
-          <p className="mt-1 text-[13px] leading-relaxed">
-            {scouting ? "reading the site…" : `"${summary}"`}
-          </p>
-        </div>
-      )}
+      <WaitlistForm />
 
       <p className="mono mt-9 text-center text-[12px] leading-relaxed text-[var(--ink)]">
         cold outreach is dying — every inbox is the same
@@ -376,59 +323,6 @@ export default function Landing() {
       </div>
 
       <Partners />
-
-      {showStep2 && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-6"
-          style={{ background: "rgba(27, 27, 25, 0.28)", backdropFilter: "blur(4px)" }}
-          onClick={() => setShowStep2(false)}
-        >
-          <div
-            className="rise w-full max-w-md rounded-xl p-5"
-            style={{ background: "var(--bg)", boxShadow: "0 24px 64px -24px rgba(27,27,25,.45)" }}
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.key === "Escape" && setShowStep2(false)}
-          >
-            <p className="label">step 2 of 2 · optional — skip freely</p>
-            <div className="mt-4 space-y-3">
-              <div>
-                <label className="label" style={{ fontSize: 11.5 }}>
-                  target accounts · hubspot pipe
-                </label>
-                <textarea
-                  className="input mt-1.5 h-16 resize-none"
-                  placeholder={`${FIXTURE_TARGETS.slice(0, 3).join(", ")}, …`}
-                  value={targets}
-                  autoFocus
-                  onChange={(e) => setTargets(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="label" style={{ fontSize: 11.5 }}>
-                  your socials · tone of voice
-                </label>
-                <input
-                  className="input mt-1.5"
-                  placeholder="linkedin.com/in/you · @you"
-                  value={ownHandles}
-                  onChange={(e) => setOwnHandles(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="mt-5 flex items-center justify-between gap-2">
-              <button
-                className="label cursor-pointer transition-colors hover:text-[var(--ink)]"
-                onClick={build}
-              >
-                skip →
-              </button>
-              <button className="btn" onClick={build}>
-                <span className="arr">→</span> build gravity
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
