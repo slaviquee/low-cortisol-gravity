@@ -46,7 +46,7 @@ export default function RootLayout({
           <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
             <Link href="/" className="flex items-center gap-2.5">
               <span className="h-[15px] w-[15px] rounded-full bg-[var(--charcoal)]" />
-              <span className="serif text-[21px] italic tracking-tight">
+              <span className="text-[18px] font-semibold tracking-tight">
                 gravity
               </span>
               <span className="label ml-1 hidden sm:inline">
@@ -62,6 +62,13 @@ export default function RootLayout({
                   </span>
                 </Link>
               ))}
+              <span className="label flex items-center gap-2">
+                <span
+                  className="pulse h-[7px] w-[7px] rounded-full"
+                  style={{ background: "var(--accent)" }}
+                />
+                coming soon
+              </span>
             </nav>
           </div>
         </header>
