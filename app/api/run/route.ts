@@ -9,11 +9,18 @@ export const maxDuration = 300; // managed agents spawn a Claude Code subprocess
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
-  const website: string = body.website?.trim() || FIXTURE_WEBSITE;
+  const websiteRaw: string = body.website?.trim() || "";
+  const website: string = websiteRaw || FIXTURE_WEBSITE;
+  // Fixture targets belong to the fixture/mock world only. A LIVE run with
+  // an empty targets box passes [] through — the resolver derives real
+  // target accounts from the ICP instead of searching fictional domains.
+  const live = websiteRaw && !process.env.GRAVITY_MOCK;
   const targets: string[] =
     Array.isArray(body.targets) && body.targets.length
       ? body.targets
-      : FIXTURE_TARGETS;
+      : live
+        ? []
+        : FIXTURE_TARGETS;
 
   const ownHandles: string = body.own_handles?.trim() || "";
   const runId = new Date().toISOString();

@@ -128,23 +128,91 @@ function emptyModel(
   };
 }
 
+// Deal titles and free text can't be people-searched — keep only
+// domain-shaped targets (HubSpot pipe merges deal NAMES into targeting).
+function domainish(t: string): string | null {
+  const d = t
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .split(/[/?#\s]/)[0];
+  return /^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}$/.test(d) ? d : null;
+}
+
+// Live runs with no usable targets shouldn't quietly demo fixture people —
+// the agent proposes real target accounts from the ICP instead.
+async function suggestTargetDomains(summary: string): Promise<string[]> {
+  const out = await generateJSON<{ domains: string[] }>({
+    model: MODEL_FAST,
+    system:
+      "You suggest target accounts for a B2B GTM motion. Only real, well-known companies (roughly 200+ employees, established sales/GTM leadership) — their primary web domains (like notion.so). No explanations.",
+    prompt: `Product: ${summary}\n\nSuggest 4 real, well-known B2B companies (as bare domains) whose sales/GTM teams are the most plausible BUYERS of this product right now.`,
+    schema: {
+      type: "object",
+      properties: {
+        domains: { type: "array", items: { type: "string" } },
+      },
+      required: ["domains"],
+    },
+    maxTokens: 300,
+  });
+  return (out?.domains ?? [])
+    .map((d) => domainish(String(d)))
+    .filter((x): x is string => Boolean(x))
+    .slice(0, 4);
+}
+
 async function resolveProspects(
   targets: string[],
   signalMap: Record<string, Signal[]> | null,
-  mock: boolean
+  mock: boolean,
+  summary?: string
 ): Promise<BuyerWorldModel[]> {
   if (mock) return fixtureProspects();
   const people: Array<FoundPerson & { account: string }> = [];
   // demo cap: 5 accounts (user-entered ones lead the merge, so the demoed
   // companies always make the cut) — halves mapping/search spend
-  for (const account of targets.slice(0, 5)) {
-    const [mapped, searched] = await Promise.all([
-      getCompanyMapping(account),
-      account.includes(".") ? searchPeople(account, TITLES) : Promise.resolve(null),
-    ]);
-    for (const person of [...(mapped ?? []), ...(searched ?? [])]) {
-      if (person.name) people.push({ ...person, account });
+  const searchAccounts = async (accounts: string[]) => {
+    for (const account of accounts.slice(0, 5)) {
+      const [mapped, searched] = await Promise.all([
+        getCompanyMapping(account),
+        account.includes(".") ? searchPeople(account, TITLES) : Promise.resolve(null),
+      ]);
+      let found = [...(mapped ?? []), ...(searched ?? [])];
+      // Narrow sales titles miss many orgs — one broad retry per account
+      // (search costs 0.25cr) before writing the account off.
+      if (!found.length && account.includes(".")) {
+        const broad = await searchPeople(account, [
+          "Sales",
+          "Revenue",
+          "Growth",
+          "Partnerships",
+          "Business Development",
+        ]);
+        found = broad ?? [];
+      }
+      for (const person of found) {
+        if (person.name) people.push({ ...person, account });
+      }
     }
+  };
+  let accounts = Array.from(
+    new Set(targets.map(domainish).filter((x): x is string => Boolean(x)))
+  );
+  if (!accounts.length && summary) {
+    accounts = await suggestTargetDomains(summary);
+    console.log("[resolve] no usable target domains — agent suggested:", accounts);
+  }
+  await searchAccounts(accounts);
+  // Dead accounts (typos, no coverage): one more chance via suggestions
+  // before ever falling back to the fixture cast.
+  if (!people.length && summary) {
+    const extra = (await suggestTargetDomains(summary)).filter(
+      (a) => !accounts.includes(a)
+    );
+    console.log("[resolve] targets yielded nobody — trying suggested:", extra);
+    await searchAccounts(extra);
   }
   const seen = new Set<string>();
   const unique = people
@@ -533,7 +601,7 @@ export async function runPipeline(
   // ── Resolver: named people (Sillage mappings + FullEnrich search), heat triage
   await mark("resolver", "running", "reading company mappings → named buyers…");
   await sleep(mock ? 2000 : 500);
-  const prospects = await resolveProspects(targets, signalMap, mock);
+  const prospects = await resolveProspects(targets, signalMap, mock, summary);
   await mark("resolver", "running", "heat triage: who actually lives in the feed?");
   await sleep(mock ? 1500 : 300);
   const hot = prospects.filter((p) => p.state !== "low_orbit");
