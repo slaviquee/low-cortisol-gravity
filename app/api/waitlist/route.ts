@@ -56,6 +56,9 @@ export async function POST(req: Request) {
     }
     all.push({ email, at: new Date().toISOString() });
     await fs.writeFile(FILE, JSON.stringify(all, null, 2));
+    // belt and suspenders: signups also land in the host's log stream,
+    // so the list is recoverable even if the disk ever goes missing
+    console.log(`[waitlist] signup #${all.length}: ${email}`);
     return { already: false, position: all.length };
   });
   return NextResponse.json({ ok: true, ...result });
