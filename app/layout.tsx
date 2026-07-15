@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, IBM_Plex_Mono, Instrument_Serif } from "next/font/google";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import SiteSwitcher from "@/components/site-switcher";
 import "./globals.css";
 
@@ -31,23 +32,27 @@ export const metadata: Metadata = {
     "Build enough relevance that your buyers discover you before you discover them.",
 };
 
-// Waitlist mode is production-only (middleware): the public site shows the
-// landing + a "coming soon" chip, while dev keeps the full app nav.
-const WAITLIST_ONLY = process.env.NODE_ENV === "production";
-const NAV: { href: string; label: string }[] = WAITLIST_ONLY
-  ? []
-  : [
-      { href: "/board", label: "pipeline" },
-      { href: "/plan", label: "plan" },
-      { href: "/warm", label: "warm queue" },
-      { href: "/brain", label: "brain" },
-    ];
+const APP_NAV = [
+  { href: "/board", label: "pipeline" },
+  { href: "/plan", label: "plan" },
+  { href: "/warm", label: "warm queue" },
+  { href: "/brain", label: "brain" },
+];
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Waitlist mode is production-only (middleware). Dev, and previewers
+  // holding the secret cookie, get the full app nav + site switcher.
+  const previewToken = process.env.PREVIEW_TOKEN;
+  const hasPreview =
+    Boolean(previewToken) &&
+    (await cookies()).get("gv_preview")?.value === previewToken;
+  const WAITLIST_ONLY = process.env.NODE_ENV === "production" && !hasPreview;
+  const NAV = WAITLIST_ONLY ? [] : APP_NAV;
+
   return (
     <html lang="en" className={`${sans.variable} ${mono.variable} ${serif.variable}`}>
       <body>
